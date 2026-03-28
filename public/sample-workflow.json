@@ -1,0 +1,128 @@
+{
+  "name": "Drygate Demo — Not Production Ready",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {
+        "path": "drygate-demo",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "id": "2",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [260, 0],
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "url": "https://api.example.com/v1/resource",
+        "method": "GET",
+        "options": {},
+        "headers": {
+          "Authorization": "Bearer sk-1234567890abcdefghijklmnop"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [520, 0],
+      "parameters": {
+        "batchSize": 50
+      }
+    },
+    {
+      "id": "4",
+      "name": "Wait Long",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [780, 0],
+      "parameters": {
+        "amount": 2,
+        "unit": "minutes"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Set After Loop",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1040, 0],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "done"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6",
+      "name": "Orphan Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 260],
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'I am disconnected' } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Wait Long",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Long": {
+      "main": [
+        [
+          {
+            "node": "Set After Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}
+
