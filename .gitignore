@@ -1,0 +1,22 @@
+node_modules
+.next
+out
+
+# Env and secrets
+.env
+.env.local
+.env.*.local
+
+# Local databases
+*.db
+prisma/*.db
+
+# TypeScript / tooling
+tsconfig.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Redundant typo duplicate of tailwind.config.js
+tailwind.cofig.js
