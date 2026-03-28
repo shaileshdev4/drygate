@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Header } from "@/components/layout/Header";
 import "../../globals.css";
 
@@ -14,7 +13,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -25,42 +24,26 @@ export default function RootLayout({
     publishableKey.trim() !== "" &&
     !publishableKey.includes("your_key");
 
-  return (
-    <>
-      {clerkEnabled ? (
-        <ClerkProvider>
-          <html lang="en" suppressHydrationWarning>
-            <head>
-              <link rel="preconnect" href="https://fonts.googleapis.com" />
-              <link
-                rel="preconnect"
-                href="https://fonts.gstatic.com"
-                crossOrigin="anonymous"
-              />
-            </head>
-            <body>
-              <Header />
-              {children}
-            </body>
-          </html>
-        </ClerkProvider>
-      ) : (
-        <html lang="en" suppressHydrationWarning>
-          <head>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link
-              rel="preconnect"
-              href="https://fonts.gstatic.com"
-              crossOrigin="anonymous"
-            />
-          </head>
-          <body>
-            <Header />
-            {children}
-          </body>
-        </html>
-      )}
-    </>
+  const htmlShell = (inner: React.ReactNode) => (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body>
+        <Header />
+        {inner}
+      </body>
+    </html>
   );
+
+  if (clerkEnabled) {
+    // Only import @clerk/nextjs when keys are actually present — prevents the
+    // package from initialising (and throwing) when no publishable key is set.
+    const { ClerkProvider } = await import("@clerk/nextjs");
+    return htmlShell(<ClerkProvider>{children}</ClerkProvider>);
+  }
+
+  return htmlShell(children);
 }
 
