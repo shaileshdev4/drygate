@@ -63,6 +63,7 @@ export default function VerifyPageClient() {
   const [logs, setLogs]         = useState<string[]>([]);
   const [error, setError]       = useState<string | null>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [shareToken, setShareToken]         = useState<string | null>(null);
 
   const fileRef  = useRef<HTMLInputElement>(null);
   const logRef   = useRef<HTMLDivElement>(null);
@@ -144,6 +145,7 @@ export default function VerifyPageClient() {
         throw new Error("Verify API did not return a share token for the report.");
       }
       setVerificationId(id);
+      setShareToken(shareToken);
 
       /* ── SSE stream (server sends default "message" events, not named event types) ── */
       const mapPipelineStage = (s: string): Stage | null => {
@@ -185,19 +187,11 @@ export default function VerifyPageClient() {
           case "verification_complete": {
             es.close();
             setStage("done");
-            setTimeout(
-              () => router.push(`/report/${encodeURIComponent(shareToken)}`),
-              600
-            );
             break;
           }
           case "pipeline_error": {
             es.close();
             setStage("done");
-            setTimeout(
-              () => router.push(`/report/${encodeURIComponent(shareToken)}`),
-              600
-            );
             break;
           }
           case "stream_end":
@@ -638,25 +632,43 @@ export default function VerifyPageClient() {
               })}
             </div>
 
-            {/* Done / Error state */}
-            {stage === "done" && (
+            {/* Done state — show View Report button */}
+            {stage === "done" && shareToken && (
               <div
                 style={{
                   marginTop: 14,
-                  padding: "12px 14px",
-                  background: "var(--jade-dim)",
-                  border: "1px solid rgba(46,207,150,0.25)",
-                  borderRadius: 11,
                   display: "flex",
-                  alignItems: "center",
-                  gap: 8,
+                  flexDirection: "column",
+                  gap: 10,
                   animation: "fadeSlideIn 0.4s both",
                 }}
               >
-                <span style={{ fontSize: 16 }}>✓</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--jade-light)", letterSpacing: "-0.01em" }}>
-                  Complete — loading report
-                </span>
+                <div
+                  style={{
+                    padding: "10px 14px",
+                    background: "var(--jade-dim)",
+                    border: "1px solid rgba(46,207,150,0.25)",
+                    borderRadius: 11,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <span style={{ fontSize: 15 }}>✓</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--jade-light)", letterSpacing: "-0.01em" }}>
+                    Verification complete
+                  </span>
+                </div>
+                <button
+                  onClick={() => router.push(`/report/${encodeURIComponent(shareToken)}`)}
+                  className="btn-primary"
+                  style={{ width: "100%", justifyContent: "center", fontSize: 14, padding: "12px 20px" }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  View Report
+                </button>
               </div>
             )}
 
