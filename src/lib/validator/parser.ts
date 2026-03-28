@@ -1,9 +1,9 @@
 import { N8nWorkflow, N8nNode, N8nConnections } from "@/types";
 
 export interface WorkflowGraph {
-  nodes: Map<string, N8nNode>;           // keyed by node name (n8n uses names in connections)
-  nodeById: Map<string, N8nNode>;        // keyed by node id
-  adjacency: Map<string, Set<string>>;   // name → set of downstream node names
+  nodes: Map<string, N8nNode>; // keyed by node name (n8n uses names in connections)
+  nodeById: Map<string, N8nNode>; // keyed by node id
+  adjacency: Map<string, Set<string>>; // name → set of downstream node names
   reverseAdjacency: Map<string, Set<string>>; // name → set of upstream node names
   triggerNodes: N8nNode[];
   allNodeNames: string[];
@@ -42,15 +42,14 @@ export function parseWorkflow(workflow: N8nWorkflow): WorkflowGraph {
 function buildAdjacency(
   connections: N8nConnections,
   adjacency: Map<string, Set<string>>,
-  reverseAdjacency: Map<string, Set<string>>
+  reverseAdjacency: Map<string, Set<string>>,
 ) {
   for (const [sourceName, outputTypes] of Object.entries(connections)) {
     for (const [, targets] of Object.entries(outputTypes)) {
       for (const targetGroup of targets) {
         for (const target of targetGroup) {
           if (!adjacency.has(sourceName)) adjacency.set(sourceName, new Set());
-          if (!reverseAdjacency.has(target.node))
-            reverseAdjacency.set(target.node, new Set());
+          if (!reverseAdjacency.has(target.node)) reverseAdjacency.set(target.node, new Set());
 
           adjacency.get(sourceName)!.add(target.node);
           reverseAdjacency.get(target.node)!.add(sourceName);
@@ -71,19 +70,13 @@ export function isTriggerNode(nodeType: string): boolean {
     "n8n-nodes-base.start",
     "@n8n/n8n-nodes-langchain.chatTrigger",
   ];
-  return (
-    triggerTypes.includes(nodeType) ||
-    nodeType.toLowerCase().includes("trigger")
-  );
+  return triggerTypes.includes(nodeType) || nodeType.toLowerCase().includes("trigger");
 }
 
 /**
  * Find all nodes reachable from the given start node (BFS)
  */
-export function reachableFrom(
-  startName: string,
-  adjacency: Map<string, Set<string>>
-): Set<string> {
+export function reachableFrom(startName: string, adjacency: Map<string, Set<string>>): Set<string> {
   const visited = new Set<string>();
   const queue = [startName];
   while (queue.length > 0) {

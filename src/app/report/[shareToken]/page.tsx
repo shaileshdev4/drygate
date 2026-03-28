@@ -22,11 +22,7 @@ const SEVERITY_META: Array<{ key: IssueSeverity; label: string; cssVar: string }
   { key: "info", label: "Info", cssVar: "var(--text-muted)" },
 ];
 
-export default async function ReportPage({
-  params,
-}: {
-  params: { shareToken: string };
-}) {
+export default async function ReportPage({ params }: { params: { shareToken: string } }) {
   const shareToken = params.shareToken;
   const baseUrl = getBaseUrl();
 
@@ -43,12 +39,12 @@ export default async function ReportPage({
   const scoreband = (data?.scoreband ?? null) as ScoreBand | null;
 
   const issues = (data?.staticReport?.issues ?? []) as Array<any>;
-  const remediationItems = ((data?.remediationPlan?.items ?? []) as RemediationItem[]);
+  const remediationItems = (data?.remediationPlan?.items ?? []) as RemediationItem[];
 
   const simulationCoverage =
     typeof data?.simulationCoverage === "number"
       ? data.simulationCoverage
-      : data?.runtimeReport?.simulationCoverage ?? null;
+      : (data?.runtimeReport?.simulationCoverage ?? null);
 
   const pipelineError = data?.pipelineError as string | null | undefined;
 
@@ -70,7 +66,7 @@ export default async function ReportPage({
 
   return (
     <main className="min-h-screen grid-bg relative">
-      {/* Soft vignette — keeps focus on content */}
+      {/* Soft vignette - keeps focus on content */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
@@ -82,7 +78,7 @@ export default async function ReportPage({
       <div className="relative z-[1] mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 pb-20 pt-12 sm:pt-16">
         {/* ── Hero ───────────────────────────────────────── */}
         <header className="border-b border-[var(--border-mid)] pb-12 sm:pb-14">
-          {/* Score — dominant, top center on mobile; top right on lg */}
+          {/* Score - dominant, top center on mobile; top right on lg */}
           <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-2xl space-y-4">
               <p
@@ -93,7 +89,12 @@ export default async function ReportPage({
               </p>
               <h1
                 className="text-[clamp(1.65rem,4vw,2.35rem)] font-semibold leading-[1.12] tracking-tight"
-                style={{ color: "var(--text)", fontFamily: "var(--font-display)", fontStyle: "italic", fontWeight: 300 }}
+                style={{
+                  color: "var(--text)",
+                  fontFamily: "var(--font-display)",
+                  fontStyle: "italic",
+                  fontWeight: 300,
+                }}
               >
                 {data?.workflowName ?? "Workflow"}
               </h1>
@@ -114,7 +115,12 @@ export default async function ReportPage({
                   </span>
                 ) : null}
                 {typeof simulationCoverage === "number" ? (
-                  <span className="text-sm font-mono" style={{ color: simulationCoverage === 0 ? "var(--text-faint)" : "var(--text-muted)" }}>
+                  <span
+                    className="text-sm font-mono"
+                    style={{
+                      color: simulationCoverage === 0 ? "var(--text-faint)" : "var(--text-muted)",
+                    }}
+                  >
                     {simulationCoverage}% sandbox coverage
                     {simulationCoverage === 0 ? " (credentials not set up in sandbox)" : ""}
                   </span>
@@ -135,7 +141,7 @@ export default async function ReportPage({
               >
                 New verification
               </Link>
-              {/* Copy share link — proper CTA */}
+              {/* Copy share link - proper CTA */}
               <a
                 href={`${baseUrl}/report/${shareToken}`}
                 className="btn-primary inline-flex items-center gap-2 justify-center rounded-full px-5 py-2.5 text-sm font-semibold"
@@ -143,7 +149,13 @@ export default async function ReportPage({
                 rel="noreferrer"
               >
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path
+                    d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
                 Share report
               </a>
@@ -158,10 +170,16 @@ export default async function ReportPage({
                 border: "1px solid rgba(240,67,110,0.2)",
               }}
             >
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--rose-light)" }}>
+              <p
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "var(--rose-light)" }}
+              >
                 What went wrong
               </p>
-              <p className="mt-2 text-sm leading-relaxed sm:text-[15px]" style={{ color: "var(--text)" }}>
+              <p
+                className="mt-2 text-sm leading-relaxed sm:text-[15px]"
+                style={{ color: "var(--text)" }}
+              >
                 {pipelineError}
               </p>
             </div>
@@ -265,10 +283,16 @@ export default async function ReportPage({
             <section>
               <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold tracking-tight sm:text-2xl" style={{ color: "var(--text)" }}>
+                  <h2
+                    className="text-xl font-semibold tracking-tight sm:text-2xl"
+                    style={{ color: "var(--text)" }}
+                  >
                     Issues
                   </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                  <p
+                    className="mt-2 max-w-xl text-sm leading-relaxed"
+                    style={{ color: "var(--text-muted)" }}
+                  >
                     Detailed findings from static analysis, guardrails, and sandbox execution.
                   </p>
                 </div>
@@ -313,17 +337,24 @@ export default async function ReportPage({
 
               {issues.length > 18 ? (
                 <p className="mt-6 text-center text-xs" style={{ color: "var(--text-muted)" }}>
-                  Showing the first 18 issues. Export or re-run for the full list in larger workflows.
+                  Showing the first 18 issues. Export or re-run for the full list in larger
+                  workflows.
                 </p>
               ) : null}
             </section>
 
             <section className="border-t border-[var(--border)] pt-16">
               <div className="mb-8">
-                <h2 className="text-xl font-semibold tracking-tight sm:text-2xl" style={{ color: "var(--text)" }}>
+                <h2
+                  className="text-xl font-semibold tracking-tight sm:text-2xl"
+                  style={{ color: "var(--text)" }}
+                >
                   Remediation
                 </h2>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+                <p
+                  className="mt-2 max-w-xl text-sm leading-relaxed"
+                  style={{ color: "var(--text-muted)" }}
+                >
                   Prioritized actions to improve production readiness. Expand each card for steps.
                 </p>
               </div>
@@ -367,9 +398,12 @@ export default async function ReportPage({
               Share this report
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
-              Anyone with this link can view the full report — no login required.
+              Anyone with this link can view the full report - no login required.
             </p>
-            <p className="mt-2 font-mono text-[11px] break-all" style={{ color: "var(--text-faint)" }}>
+            <p
+              className="mt-2 font-mono text-[11px] break-all"
+              style={{ color: "var(--text-faint)" }}
+            >
               {`${baseUrl}/report/${shareToken}`}
             </p>
           </div>
@@ -380,7 +414,13 @@ export default async function ReportPage({
             rel="noreferrer"
           >
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-              <path d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Open share link
           </a>

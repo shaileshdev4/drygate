@@ -6,18 +6,30 @@ const STEPS = [
     number: "01",
     title: "Upload your workflow",
     description:
-      "Paste your n8n workflow JSON directly or drag and drop a .json export. Drygate accepts any workflow format exported from the n8n editor — no preprocessing needed.",
+      "Paste your n8n workflow JSON directly or drag and drop a .json export. Drygate accepts any workflow format exported from the n8n editor - no preprocessing needed.",
     color: "var(--violet)",
     glow: "rgba(138,99,255,0.2)",
     detail: [
       "Supports paste, file upload, or the pre-loaded demo workflow",
-      "Validates JSON structure immediately — clear errors if malformed",
+      "Validates JSON structure immediately - clear errors if malformed",
       "Works with any n8n version export",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M12 16V4M8 8l4-4 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M4 18v1a1 1 0 001 1h14a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.5"/>
+        <path
+          d="M12 16V4M8 8l4-4 4 4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M4 18v1a1 1 0 001 1h14a1 1 0 001-1v-1"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.5"
+        />
       </svg>
     ),
   },
@@ -25,7 +37,7 @@ const STEPS = [
     number: "02",
     title: "Static analysis runs",
     description:
-      "Drygate parses the workflow graph and runs deterministic rule checks — no n8n required. Issues are categorized by type and severity.",
+      "Drygate parses the workflow graph and runs deterministic rule checks - no n8n required. Issues are categorized by type and severity.",
     color: "var(--sky)",
     glow: "rgba(66,176,245,0.2)",
     detail: [
@@ -36,8 +48,14 @@ const STEPS = [
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" opacity="0.4"/>
-        <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" opacity="0.4" />
+        <path
+          d="M9 12l2 2 4-4"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
@@ -56,8 +74,17 @@ const STEPS = [
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.8" opacity="0.4"/>
-        <path d="M9 8l6 4-6 4V8z" fill="currentColor" opacity="0.8"/>
+        <rect
+          x="3"
+          y="3"
+          width="18"
+          height="18"
+          rx="3"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          opacity="0.4"
+        />
+        <path d="M9 8l6 4-6 4V8z" fill="currentColor" opacity="0.8" />
       </svg>
     ),
   },
@@ -76,7 +103,13 @@ const STEPS = [
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" opacity="0.7"/>
+        <path
+          d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          opacity="0.7"
+        />
       </svg>
     ),
   },
@@ -84,7 +117,7 @@ const STEPS = [
     number: "05",
     title: "Remediation plan",
     description:
-      "Every issue generates a prioritized fix card — effort estimate, exact steps, and which node to edit. Fix the most critical first, work down the list.",
+      "Every issue generates a prioritized fix card - effort estimate, exact steps, and which node to edit. Fix the most critical first, work down the list.",
     color: "var(--coral)",
     glow: "rgba(255,107,74,0.2)",
     detail: [
@@ -95,9 +128,15 @@ const STEPS = [
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.5"/>
-        <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.8"/>
-        <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        <path
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.5"
+        />
+        <rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M9 12h6M9 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -105,19 +144,31 @@ const STEPS = [
     number: "06",
     title: "Shareable report",
     description:
-      "Every verification generates a unique share token. Anyone with the link can view the full report — score, issues, remediation — without needing an account.",
+      "Every verification generates a unique share token. Anyone with the link can view the full report - score, issues, remediation - without needing an account.",
     color: "var(--violet-light)",
     glow: "rgba(167,139,255,0.2)",
     detail: [
-      "Persistent report URL — share with your team, PM, or reviewer",
+      "Persistent report URL - share with your team, PM, or reviewer",
       "Full report: score, band, issue list, remediation plan",
       "No login required to view a shared report",
       "History page keeps all your past verifications",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-        <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.5"/>
-        <path d="M16 6l-4-4-4 4M12 2v13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path
+          d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          opacity="0.5"
+        />
+        <path
+          d="M16 6l-4-4-4 4M12 2v13"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
@@ -134,11 +185,11 @@ const FAQ = [
   },
   {
     q: "How is the score calculated?",
-    a: "The scorer starts at 100 and deducts points per finding. Deductions scale by severity (critical > high > medium > low). Some issues (missing trigger, hardcoded secrets) are fail-closed — they cap the score at a ceiling regardless of other findings. Runtime deductions for nodes that error in the sandbox add on top.",
+    a: "The scorer starts at 100 and deducts points per finding. Deductions scale by severity (critical > high > medium > low). Some issues (missing trigger, hardcoded secrets) are fail-closed - they cap the score at a ceiling regardless of other findings. Runtime deductions for nodes that error in the sandbox add on top.",
   },
   {
     q: "Can the sandbox run every type of node?",
-    a: "Most nodes run normally in the sandbox. External API calls are made from the sandbox environment. Nodes that require real credentials (e.g. database connections, OAuth services) will error in the sandbox — this is expected and is captured as a runtime trace, not a failure of Drygate itself.",
+    a: "Most nodes run normally in the sandbox. External API calls are made from the sandbox environment. Nodes that require real credentials (e.g. database connections, OAuth services) will error in the sandbox - this is expected and is captured as a runtime trace, not a failure of Drygate itself.",
   },
   {
     q: "Is 0% simulation coverage a problem?",
@@ -146,7 +197,7 @@ const FAQ = [
   },
   {
     q: "Is the share link public?",
-    a: "Anyone with the share URL can view the report. The token is a random ID — it's not guessable, but it's not authenticated. Don't share reports that contain sensitive workflow structures you'd rather keep private.",
+    a: "Anyone with the share URL can view the report. The token is a random ID - it's not guessable, but it's not authenticated. Don't share reports that contain sensitive workflow structures you'd rather keep private.",
   },
 ];
 
@@ -163,7 +214,6 @@ export default function HowItWorksPage() {
       />
 
       <div className="relative z-[1] mx-auto max-w-4xl px-5 sm:px-8 pb-24 pt-14 sm:pt-20">
-
         {/* ── Hero ─────────────────────────────────────────── */}
         <div className="mb-20 max-w-2xl">
           <p
@@ -179,13 +229,22 @@ export default function HowItWorksPage() {
             Six steps from upload to fix plan
           </h1>
           <p className="mt-5 text-base leading-relaxed" style={{ color: "var(--text-2)" }}>
-            Drygate runs a layered verification pipeline — static analysis then live sandbox execution — and produces a single readiness score with prioritized remediation cards.
+            Drygate runs a layered verification pipeline - static analysis then live sandbox
+            execution - and produces a single readiness score with prioritized remediation cards.
           </p>
           <div className="mt-8 flex gap-3 flex-wrap">
-            <Link href="/verify?demo=1" className="btn-primary" style={{ fontSize: 14, padding: "11px 24px" }}>
+            <Link
+              href="/verify?demo=1"
+              className="btn-primary"
+              style={{ fontSize: 14, padding: "11px 24px" }}
+            >
               Try with demo workflow
             </Link>
-            <Link href="/verify" className="btn-ghost" style={{ fontSize: 14, padding: "11px 24px" }}>
+            <Link
+              href="/verify"
+              className="btn-ghost"
+              style={{ fontSize: 14, padding: "11px 24px" }}
+            >
               Upload your own
             </Link>
           </div>
@@ -204,7 +263,12 @@ export default function HowItWorksPage() {
               }}
             >
               {/* Color accent top bar */}
-              <div style={{ height: 2, background: `linear-gradient(90deg, ${step.color}, transparent 70%)` }} />
+              <div
+                style={{
+                  height: 2,
+                  background: `linear-gradient(90deg, ${step.color}, transparent 70%)`,
+                }}
+              />
 
               <div className="p-7 sm:p-8">
                 <div className="flex items-start gap-5">
@@ -266,7 +330,11 @@ export default function HowItWorksPage() {
                     {/* Detail bullets */}
                     <ul className="space-y-2">
                       {step.detail.map((d, di) => (
-                        <li key={di} className="flex items-start gap-2.5 text-sm" style={{ color: "var(--text-muted)" }}>
+                        <li
+                          key={di}
+                          className="flex items-start gap-2.5 text-sm"
+                          style={{ color: "var(--text-muted)" }}
+                        >
                           <span
                             style={{
                               width: 5,
@@ -332,7 +400,8 @@ export default function HowItWorksPage() {
             className="pointer-events-none absolute"
             style={{
               inset: 0,
-              background: "radial-gradient(ellipse 60% 55% at 50% 120%, rgba(138,99,255,0.18) 0%, transparent 65%)",
+              background:
+                "radial-gradient(ellipse 60% 55% at 50% 120%, rgba(138,99,255,0.18) 0%, transparent 65%)",
             }}
           />
           <div className="relative z-[1]">
@@ -343,13 +412,21 @@ export default function HowItWorksPage() {
               Ready to verify your workflow?
             </h2>
             <p className="text-sm mb-8" style={{ color: "var(--text-muted)" }}>
-              Takes under 60 seconds. Score, issues, and fix plan — all in one report.
+              Takes under 60 seconds. Score, issues, and fix plan - all in one report.
             </p>
             <div className="flex gap-3 flex-wrap justify-center">
-              <Link href="/verify?demo=1" className="btn-primary" style={{ fontSize: 14, padding: "12px 28px" }}>
+              <Link
+                href="/verify?demo=1"
+                className="btn-primary"
+                style={{ fontSize: 14, padding: "12px 28px" }}
+              >
                 Use demo workflow
               </Link>
-              <Link href="/verify" className="btn-ghost" style={{ fontSize: 14, padding: "12px 28px" }}>
+              <Link
+                href="/verify"
+                className="btn-ghost"
+                style={{ fontSize: 14, padding: "12px 28px" }}
+              >
                 Upload your own
               </Link>
             </div>

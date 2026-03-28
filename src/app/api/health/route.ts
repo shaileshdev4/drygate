@@ -9,9 +9,9 @@ export async function GET() {
     node_env: process.env.NODE_ENV,
     port: process.env.PORT ?? "(defaulting to 3000)",
     env_vars: {
-      DATABASE_URL:    process.env.DATABASE_URL  ? "set" : "MISSING",
-      DIRECT_URL:      process.env.DIRECT_URL    ? "set" : "MISSING",
-      SANDBOX_N8N_URL: process.env.SANDBOX_N8N_URL || "(not set — sandbox disabled)",
+      DATABASE_URL: process.env.DATABASE_URL ? "set" : "MISSING",
+      DIRECT_URL: process.env.DIRECT_URL ? "set" : "MISSING",
+      SANDBOX_N8N_URL: process.env.SANDBOX_N8N_URL || "(not set - sandbox disabled)",
       NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "(not set)",
     },
   };
@@ -31,6 +31,6 @@ export async function GET() {
   const allOk = dbStatus === "ok";
   return NextResponse.json(
     { status: allOk ? "ok" : "degraded", checks },
-    { status: allOk ? 200 : 503 }
+    { status: allOk ? 200 : 503 },
   );
 }

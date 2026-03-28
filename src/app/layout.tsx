@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import "../../globals.css";
 
 export const metadata: Metadata = {
-  title: "Drygate — n8n Production Readiness Verifier",
+  title: "Drygate",
   description:
     "Upload an n8n workflow template and get a production readiness score with exact fix steps. Real sandbox execution. Zero guessing.",
   openGraph: {

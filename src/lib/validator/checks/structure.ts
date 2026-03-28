@@ -1,15 +1,12 @@
 import { N8nWorkflow, Issue } from "@/types";
 import { WorkflowGraph, reachableFrom, hasCycle, isTriggerNode } from "../parser";
 
-/** n8n Sticky Notes are annotations only: no wires, no execution — not a defect. */
+/** n8n Sticky Notes are annotations only: no wires, no execution - not a defect. */
 function isStickyNoteNode(nodeType: string): boolean {
   return nodeType.toLowerCase() === "n8n-nodes-base.stickynote";
 }
 
-export function runStructureChecks(
-  workflow: N8nWorkflow,
-  graph: WorkflowGraph
-): Issue[] {
+export function runStructureChecks(workflow: N8nWorkflow, graph: WorkflowGraph): Issue[] {
   const issues: Issue[] = [];
 
   // ── 1. Missing trigger ──────────────────────────────────────────────
@@ -35,8 +32,7 @@ export function runStructureChecks(
     if (isStickyNoteNode(node.type)) continue;
     if (node.disabled) continue;
 
-    const hasUpstream =
-      (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
+    const hasUpstream = (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
     const hasDownstream = (graph.adjacency.get(node.name)?.size ?? 0) > 0;
 
     if (!hasUpstream && !hasDownstream) {
@@ -70,8 +66,7 @@ export function runStructureChecks(
       if (node.disabled) continue;
       if (reachable.has(node.name)) continue;
 
-      const hasUpstream =
-        (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
+      const hasUpstream = (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
       const hasDownstream = (graph.adjacency.get(node.name)?.size ?? 0) > 0;
 
       // Fully disconnected (no in, no out) is already one DISCONNECTED_NODE in §2.
@@ -79,7 +74,7 @@ export function runStructureChecks(
       if (!hasUpstream && !hasDownstream) continue;
 
       if (hasUpstream) {
-        // Subgraph not reachable from trigger but this node has a parent — same as before:
+        // Subgraph not reachable from trigger but this node has a parent - same as before:
         // do not duplicate many issues along the chain.
         continue;
       }
@@ -109,7 +104,7 @@ export function runStructureChecks(
       severity: "high",
       title: "Circular dependency detected in workflow",
       detail:
-        "The workflow contains a cycle — a path that loops back to a node already in the execution chain. Without a proper exit condition this will run indefinitely.",
+        "The workflow contains a cycle - a path that loops back to a node already in the execution chain. Without a proper exit condition this will run indefinitely.",
       remediationHint:
         "Add an IF node with an explicit exit condition before any back-edge connection. n8n's Split In Batches node is the correct pattern for controlled looping.",
     });
@@ -120,8 +115,7 @@ export function runStructureChecks(
     if (!node.disabled) continue;
     if (isStickyNoteNode(node.type)) continue;
 
-    const hasUpstream =
-      (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
+    const hasUpstream = (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
     const hasDownstream = (graph.adjacency.get(node.name)?.size ?? 0) > 0;
 
     if (hasUpstream && hasDownstream) {
@@ -140,7 +134,7 @@ export function runStructureChecks(
     }
   }
 
-  // Deduplicate by issueCode + nodeId — a node that is fully disconnected will
+  // Deduplicate by issueCode + nodeId - a node that is fully disconnected will
   // sometimes also appear in the unreachable check; keep the first occurrence only.
   const seen = new Set<string>();
   const deduped = issues.filter((issue) => {

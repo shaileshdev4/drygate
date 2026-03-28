@@ -1,5 +1,5 @@
 {
-  "name": "Drygate Demo — Not Production Ready",
+  "name": "Drygate Demo - Not Production Ready",
   "nodes": [
     {
       "id": "1",
@@ -125,4 +125,3 @@
   },
   "settings": {}
 }
-

@@ -1,13 +1,6 @@
 import Dockerode from "dockerode";
 import axios from "axios";
-import {
-  Issue,
-  N8nWorkflow,
-  NodeCoverage,
-  RuntimeReport,
-  NodeTrace,
-  EgressLog,
-} from "@/types";
+import { Issue, N8nWorkflow, NodeCoverage, RuntimeReport, NodeTrace, EgressLog } from "@/types";
 import { isRunnable } from "@/lib/validator/classifier";
 
 function createDockerClient() {
@@ -19,7 +12,7 @@ function createDockerClient() {
   return new Dockerode({ socketPath: "/var/run/docker.sock" });
 }
 
-// Lazy — only instantiated when the ephemeral (local Docker) path is actually used.
+// Lazy - only instantiated when the ephemeral (local Docker) path is actually used.
 // This prevents Railway/serverless environments from crashing at module load time
 // because there is no Docker socket available there.
 let _docker: Dockerode | null = null;
@@ -36,8 +29,7 @@ const docker = new Proxy({} as Dockerode, {
 
 // Default to latest so demo workflows (LangChain, etc.) match installed node types.
 // Override with SANDBOX_N8N_IMAGE if you need a pinned tag.
-const N8N_IMAGE =
-  process.env.SANDBOX_N8N_IMAGE?.trim() || "n8nio/n8n:latest";
+const N8N_IMAGE = process.env.SANDBOX_N8N_IMAGE?.trim() || "n8nio/n8n:latest";
 
 /** Optional: n8n public API key (JWT) for 2.x when REST /run is unavailable or rejects Basic auth. */
 const SANDBOX_N8N_API_KEY = process.env.SANDBOX_N8N_API_KEY?.trim() || "";
@@ -79,9 +71,7 @@ interface SandboxResult {
  * Important: we preserve the original node `id` and `name` so our trace/
  * coverage mapping remains stable.
  */
-function transformWorkflowForManualExecution(
-  workflow: N8nWorkflow
-): N8nWorkflow {
+function transformWorkflowForManualExecution(workflow: N8nWorkflow): N8nWorkflow {
   const nodes = workflow.nodes.map((n) => {
     const type = (n.type ?? "").toLowerCase();
     const isManualTrigger = type === "n8n-nodes-base.manualtrigger";
@@ -105,7 +95,7 @@ function transformWorkflowForManualExecution(
   return { ...workflow, nodes };
 }
 
-/** Name of the coerced manual trigger — required for n8n 2.x POST /rest/workflows/:id/run. */
+/** Name of the coerced manual trigger - required for n8n 2.x POST /rest/workflows/:id/run. */
 function getManualTriggerNodeName(workflow: N8nWorkflow): string | null {
   const node = workflow.nodes.find((n) => {
     const t = (n.type ?? "").toLowerCase();
@@ -118,15 +108,10 @@ export async function runSandbox(
   verificationId: string,
   workflow: N8nWorkflow,
   coverage: NodeCoverage[],
-  onLog: (msg: string) => void
+  onLog: (msg: string) => void,
 ): Promise<SandboxResult> {
   if (PERSISTENT_SANDBOX_URL) {
-    return runPersistentSandbox(
-      verificationId,
-      workflow,
-      coverage,
-      onLog
-    );
+    return runPersistentSandbox(verificationId, workflow, coverage, onLog);
   }
 
   const networkName = `drygate-net-${verificationId}`;
@@ -159,10 +144,7 @@ export async function runSandbox(
     gwContainer = await docker.createContainer({
       Image: MOCK_GW_IMAGE,
       name: gwContainerName,
-      Env: [
-        "GATEWAY_PORT=4000",
-        "LOG_FILE=/tmp/egress-log.json",
-      ],
+      Env: ["GATEWAY_PORT=4000", "LOG_FILE=/tmp/egress-log.json"],
       NetworkingConfig: {
         EndpointsConfig: { [networkName]: {} },
       },
@@ -207,10 +189,7 @@ export async function runSandbox(
 
     const inspectData = await n8nContainer.inspect();
     const hostPort = (
-      inspectData.NetworkSettings.Ports as Record<
-        string,
-        Array<{ HostPort: string }>
-      >
+      inspectData.NetworkSettings.Ports as Record<string, Array<{ HostPort: string }>>
     )["5678/tcp"]?.[0]?.HostPort;
     if (!hostPort) {
       throw new Error("n8n container started but no host port was assigned");
@@ -237,12 +216,7 @@ export async function runSandbox(
 
     // ── 8. Poll for completion ────────────────────────────────────
     onLog("Waiting for execution to complete...");
-    const executionData = await pollExecution(
-      n8nBaseUrl,
-      executionId,
-      SANDBOX_TIMEOUT_MS,
-      onLog
-    );
+    const executionData = await pollExecution(n8nBaseUrl, executionId, SANDBOX_TIMEOUT_MS, onLog);
 
     // ── 9. Extract traces ─────────────────────────────────────────
     onLog("Extracting node traces...");
@@ -254,12 +228,10 @@ export async function runSandbox(
 
     const simulatableCount = coverage.filter(isRunnable).length;
     const ranCount = nodeTraces.filter(
-      (t) => t.status === "success" || t.status === "error"
+      (t) => t.status === "success" || t.status === "error",
     ).length;
     const simulationCoverage =
-      simulatableCount > 0
-        ? Math.round((ranCount / simulatableCount) * 100)
-        : 0;
+      simulatableCount > 0 ? Math.round((ranCount / simulatableCount) * 100) : 0;
 
     const sandboxEndedAt = new Date().toISOString();
 
@@ -275,7 +247,7 @@ export async function runSandbox(
       },
     };
   } finally {
-    // ── Teardown — always runs ────────────────────────────────────
+    // ── Teardown - always runs ────────────────────────────────────
     onLog("Tearing down sandbox...");
     await safeStop(n8nContainer);
     await safeStop(gwContainer);
@@ -288,13 +260,13 @@ async function runPersistentSandbox(
   verificationId: string,
   workflow: N8nWorkflow,
   coverage: NodeCoverage[],
-  onLog: (msg: string) => void
+  onLog: (msg: string) => void,
 ): Promise<SandboxResult> {
   // API key may be absent here and auto-provisioned inside waitForPersistentN8nApi.
   const sandboxStartedAt = new Date().toISOString();
   const sandboxBaseUrl = PERSISTENT_SANDBOX_URL.replace(/\/+$/, "");
   const workflowName = sanitizeN8nWorkflowName(
-    `drygate-${verificationId}-${workflow.name || "workflow"}`
+    `drygate-${verificationId}-${workflow.name || "workflow"}`,
   );
   let remoteWorkflowId: string | null = null;
   const executionWorkflow = transformWorkflowForManualExecution(workflow);
@@ -307,7 +279,7 @@ async function runPersistentSandbox(
     const createdWorkflow = await createPersistentWorkflow(
       sandboxBaseUrl,
       executionWorkflow,
-      workflowName
+      workflowName,
     );
     remoteWorkflowId = createdWorkflow.id;
     onLog(`[sandbox] workflow created: ${remoteWorkflowId}`);
@@ -318,7 +290,7 @@ async function runPersistentSandbox(
       remoteWorkflowId,
       createdWorkflow.workflowData,
       executionWorkflow,
-      onLog
+      onLog,
     );
     onLog(`[sandbox] execution started: ${executionId}`);
 
@@ -327,25 +299,22 @@ async function runPersistentSandbox(
       sandboxBaseUrl,
       executionId,
       SANDBOX_TIMEOUT_MS,
-      onLog
+      onLog,
     );
 
     onLog("Extracting node traces...");
     const nodeTraces = extractTraces(executionData, workflow, coverage);
     const simulatableCount = coverage.filter(isRunnable).length;
     const ranCount = nodeTraces.filter(
-      (t) => t.status === "success" || t.status === "error"
+      (t) => t.status === "success" || t.status === "error",
     ).length;
     const simulationCoverage =
-      simulatableCount > 0
-        ? Math.round((ranCount / simulatableCount) * 100)
-        : 0;
+      simulatableCount > 0 ? Math.round((ranCount / simulatableCount) * 100) : 0;
     const sandboxEndedAt = new Date().toISOString();
 
     let guardrailIssues: Issue[] = [];
     const fuzzEnabled =
-      process.env.DRYGATE_INPUT_FUZZ === "true" ||
-      process.env.DRYGATE_INPUT_FUZZ === "1";
+      process.env.DRYGATE_INPUT_FUZZ === "true" || process.env.DRYGATE_INPUT_FUZZ === "1";
     if (fuzzEnabled && remoteWorkflowId) {
       guardrailIssues = await runPersistentFuzzExecutions(
         sandboxBaseUrl,
@@ -354,7 +323,7 @@ async function runPersistentSandbox(
         executionWorkflow,
         workflow,
         coverage,
-        onLog
+        onLog,
       );
     }
 
@@ -372,18 +341,15 @@ async function runPersistentSandbox(
   } finally {
     if (remoteWorkflowId) {
       try {
-        await axios.delete(
-          `${sandboxBaseUrl}/rest/workflows/${remoteWorkflowId}`,
-          {
-            headers: persistentHeadersWithOptionalApiKey(),
-            auth: persistentRequestAuth(),
-            timeout: 10_000,
-          }
-        );
+        await axios.delete(`${sandboxBaseUrl}/rest/workflows/${remoteWorkflowId}`, {
+          headers: persistentHeadersWithOptionalApiKey(),
+          auth: persistentRequestAuth(),
+          timeout: 10_000,
+        });
         onLog(`[sandbox] cleaned remote workflow: ${remoteWorkflowId}`);
       } catch (err) {
         onLog(
-          `[sandbox] cleanup warning for workflow ${remoteWorkflowId}: ${(err as Error).message}`
+          `[sandbox] cleanup warning for workflow ${remoteWorkflowId}: ${(err as Error).message}`,
         );
       }
     }
@@ -409,9 +375,9 @@ async function ensureMockGatewayImage(onLog: (m: string) => void) {
           docker.modem.followProgress(
             s,
             (buildErr: Error | null) => (buildErr ? reject(buildErr) : resolve()),
-            () => {}
+            () => {},
           );
-        }
+        },
       );
     });
   }
@@ -438,14 +404,14 @@ function persistentHeadersWithOptionalApiKey(): Record<string, string> {
 /**
  * n8n 0.236.2 (pre-v1.0) still supports Basic Auth.
  * Use session cookie when established; fall back to Basic Auth otherwise.
- * (On n8n v1.x+ Basic Auth was removed — session cookie only.)
+ * (On n8n v1.x+ Basic Auth was removed - session cookie only.)
  */
 function persistentRequestAuth() {
   if (persistentSessionCookie) {
-    // Cookie is set — don't send Basic Auth to avoid header conflicts on newer n8n.
+    // Cookie is set - don't send Basic Auth to avoid header conflicts on newer n8n.
     return undefined;
   }
-  // No session yet — use Basic Auth (supported on n8n 0.x).
+  // No session yet - use Basic Auth (supported on n8n 0.x).
   return persistentBasicAuth();
 }
 
@@ -455,11 +421,7 @@ function parseExecutionIdFromRunResponse(data: unknown): string | null {
   if (nested.waitingForWebhook === true || body.waitingForWebhook === true) {
     return null;
   }
-  const raw =
-    nested.executionId ??
-    body.executionId ??
-    nested.id ??
-    body.id;
+  const raw = nested.executionId ?? body.executionId ?? nested.id ?? body.id;
   if (typeof raw === "string" || typeof raw === "number") {
     return String(raw);
   }
@@ -483,14 +445,13 @@ async function ensurePersistentSession(baseUrl: string, onLog: (m: string) => vo
   });
   if (settingsRes.status !== 200) {
     throw new Error(
-      `n8n /rest/settings failed (${settingsRes.status}) — check Basic Auth (user "${SANDBOX_USER}") and SANDBOX_N8N_URL.`
+      `n8n /rest/settings failed (${settingsRes.status}) - check Basic Auth (user "${SANDBOX_USER}") and SANDBOX_N8N_URL.`,
     );
   }
-  const settingsData = (settingsRes.data as Record<string, unknown>)
-    .data as Record<string, unknown> | undefined;
-  const userManagement = settingsData?.userManagement as
+  const settingsData = (settingsRes.data as Record<string, unknown>).data as
     | Record<string, unknown>
     | undefined;
+  const userManagement = settingsData?.userManagement as Record<string, unknown> | undefined;
   const showSetup = Boolean(userManagement?.showSetupOnFirstLoad);
 
   if (showSetup) {
@@ -503,11 +464,11 @@ async function ensurePersistentSession(baseUrl: string, onLog: (m: string) => vo
         lastName: "Sandbox",
         password: N8N_SETUP_PASS,
       },
-      { timeout: 15_000, validateStatus: () => true, auth }
+      { timeout: 15_000, validateStatus: () => true, auth },
     );
     if (setup.status !== 200) {
       throw new Error(
-        `n8n owner setup failed (${setup.status}): ${JSON.stringify(setup.data).slice(0, 300)}`
+        `n8n owner setup failed (${setup.status}): ${JSON.stringify(setup.data).slice(0, 300)}`,
       );
     }
   }
@@ -541,20 +502,22 @@ async function ensurePersistentSession(baseUrl: string, onLog: (m: string) => vo
     const n8nAuthCookie = setCookieHeader?.find((c) => c.startsWith("n8n-auth="));
     if (n8nAuthCookie) {
       persistentSessionCookie = n8nAuthCookie.split(";")[0];
-      onLog("[sandbox] session cookie acquired — using cookie auth.");
+      onLog("[sandbox] session cookie acquired - using cookie auth.");
       return;
     }
-    onLog("[sandbox] login OK but no n8n-auth cookie — falling back to Basic Auth.");
+    onLog("[sandbox] login OK but no n8n-auth cookie - falling back to Basic Auth.");
     return;
   }
 
-  // Login failed — Basic Auth fallback will be used for all subsequent calls.
-  onLog(`[sandbox] login failed (${login.status}) — will use Basic Auth fallback. Response: ${JSON.stringify(login.data).slice(0, 200)}`);
+  // Login failed - Basic Auth fallback will be used for all subsequent calls.
+  onLog(
+    `[sandbox] login failed (${login.status}) - will use Basic Auth fallback. Response: ${JSON.stringify(login.data).slice(0, 200)}`,
+  );
 
   // With N8N_USER_MANAGEMENT_DISABLED=true there is no user DB; /rest/login fails
   // even though REST accepts Basic Auth (same as browser: first dialog only).
   onLog(
-    `[sandbox] session login not available (${login.status}); using Basic Auth for REST (normal when user management is disabled).`
+    `[sandbox] session login not available (${login.status}); using Basic Auth for REST (normal when user management is disabled).`,
   );
 }
 
@@ -567,7 +530,7 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
     attempt += 1;
     try {
       const auth = persistentBasicAuth();
-      // Use 10s per request — n8n may be slow to respond during DB migrations.
+      // Use 10s per request - n8n may be slow to respond during DB migrations.
       const health = await axios.get(`${baseUrl}/healthz`, {
         timeout: 10_000,
         validateStatus: () => true,
@@ -579,7 +542,7 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
         auth,
       });
       onLog(
-        `[sandbox] persistent probe #${attempt}: healthz=${health.status} rest-settings=${settings.status}`
+        `[sandbox] persistent probe #${attempt}: healthz=${health.status} rest-settings=${settings.status}`,
       );
 
       if (health.status !== 200 || settings.status !== 200) {
@@ -591,9 +554,7 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
       await ensurePersistentSession(baseUrl, onLog);
       return;
     } catch (err) {
-      onLog(
-        `[sandbox] persistent probe #${attempt}: error ${(err as Error).message}`
-      );
+      onLog(`[sandbox] persistent probe #${attempt}: error ${(err as Error).message}`);
     }
     await sleep(3_000);
   }
@@ -603,7 +564,7 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
 async function createPersistentWorkflow(
   baseUrl: string,
   workflow: N8nWorkflow,
-  workflowName: string
+  workflowName: string,
 ) {
   const response = await axios.post(
     `${baseUrl}/rest/workflows`,
@@ -620,23 +581,20 @@ async function createPersistentWorkflow(
       auth: persistentRequestAuth(),
       timeout: 10_000,
       validateStatus: () => true,
-    }
+    },
   );
   if (response.status >= 400) {
     throw new Error(
-      `Persistent create workflow failed (${response.status}): ${JSON.stringify(response.data).slice(0, 400)}`
+      `Persistent create workflow failed (${response.status}): ${JSON.stringify(response.data).slice(0, 400)}`,
     );
   }
   const body = response.data as Record<string, unknown>;
   const nested = (body.data as Record<string, unknown> | undefined) ?? {};
   const idRaw = nested.id ?? body.id;
-  const id =
-    typeof idRaw === "string" || typeof idRaw === "number"
-      ? String(idRaw)
-      : null;
+  const id = typeof idRaw === "string" || typeof idRaw === "number" ? String(idRaw) : null;
   if (!id) {
     throw new Error(
-      `Persistent create workflow returned no id: ${JSON.stringify(response.data).slice(0, 400)}`
+      `Persistent create workflow returned no id: ${JSON.stringify(response.data).slice(0, 400)}`,
     );
   }
   return {
@@ -652,7 +610,7 @@ async function createPersistentWorkflow(
 async function fetchLatestExecutionId(
   baseUrl: string,
   workflowId: string,
-  config: Parameters<typeof axios.get>[1]
+  config: Parameters<typeof axios.get>[1],
 ): Promise<string | null> {
   try {
     const resp = await axios.get(`${baseUrl}/rest/executions`, {
@@ -680,12 +638,12 @@ async function executePersistentWorkflow(
   workflowId: string,
   workflowData: Record<string, unknown>,
   executionWorkflow: N8nWorkflow,
-  onLog: (m: string) => void
+  onLog: (m: string) => void,
 ) {
   const triggerName = getManualTriggerNodeName(executionWorkflow);
   if (!triggerName) {
     throw new Error(
-      "Sandbox could not find a Manual Trigger node after coercion; cannot run workflow."
+      "Sandbox could not find a Manual Trigger node after coercion; cannot run workflow.",
     );
   }
 
@@ -697,32 +655,26 @@ async function executePersistentWorkflow(
   };
 
   // ── Attempt 1: n8n 0.x (0.236.2) ─────────────────────────────────────────
-  // Endpoint: POST /rest/workflows/run  (no ID in path — workflow sent in body)
+  // Endpoint: POST /rest/workflows/run  (no ID in path - workflow sent in body)
   const v0Body = {
     workflowData: { ...workflowData, id: workflowId },
     startNodes: [triggerName],
     destinationNode: "",
   };
 
-  let restResponse = await axios.post(
-    `${baseUrl}/rest/workflows/run`,
-    v0Body,
-    runConfig
-  );
+  let restResponse = await axios.post(`${baseUrl}/rest/workflows/run`, v0Body, runConfig);
 
   onLog(`[sandbox] v0 run attempt: ${restResponse.status}`);
 
   if (restResponse.status < 400) {
     if (responseIndicatesWebhookWait(restResponse.data)) {
-      throw new Error(
-        "n8n returned waitingForWebhook — start node is not a manual trigger."
-      );
+      throw new Error("n8n returned waitingForWebhook - start node is not a manual trigger.");
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
     if (id) return id;
     // n8n 0.x returns execution data inline (no executionId in body).
     // Fetch the most recent execution for this workflow instead of polling.
-    onLog("[sandbox] v0 run OK but no execution id — fetching latest execution from list...");
+    onLog("[sandbox] v0 run OK but no execution id - fetching latest execution from list...");
     const latestId = await fetchLatestExecutionId(baseUrl, workflowId, runConfig);
     if (latestId) {
       onLog(`[sandbox] found latest execution id: ${latestId}`);
@@ -742,18 +694,14 @@ async function executePersistentWorkflow(
     destinationNode: "",
   };
 
-  restResponse = await axios.post(
-    `${baseUrl}/rest/workflows/${workflowId}/run`,
-    v1Body,
-    runConfig
-  );
+  restResponse = await axios.post(`${baseUrl}/rest/workflows/${workflowId}/run`, v1Body, runConfig);
 
   onLog(`[sandbox] v1 run attempt: ${restResponse.status}`);
 
   if (restResponse.status < 400) {
     if (responseIndicatesWebhookWait(restResponse.data)) {
       throw new Error(
-        "n8n returned waitingForWebhook (v1 run) — cannot complete sandbox execution."
+        "n8n returned waitingForWebhook (v1 run) - cannot complete sandbox execution.",
       );
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
@@ -769,18 +717,14 @@ async function executePersistentWorkflow(
     destinationNode: { nodeName: triggerName, mode: "inclusive" as const },
   };
 
-  restResponse = await axios.post(
-    `${baseUrl}/rest/workflows/${workflowId}/run`,
-    v2Body,
-    runConfig
-  );
+  restResponse = await axios.post(`${baseUrl}/rest/workflows/${workflowId}/run`, v2Body, runConfig);
 
   onLog(`[sandbox] v2 run attempt: ${restResponse.status}`);
 
   if (restResponse.status < 400) {
     if (responseIndicatesWebhookWait(restResponse.data)) {
       throw new Error(
-        "n8n returned waitingForWebhook (v2 run) — cannot complete sandbox execution."
+        "n8n returned waitingForWebhook (v2 run) - cannot complete sandbox execution.",
       );
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
@@ -789,7 +733,7 @@ async function executePersistentWorkflow(
 
   const restErr = JSON.stringify(restResponse.data).slice(0, 280);
   throw new Error(
-    `Persistent execute failed after v0/v1/v2 attempts. Last status: ${restResponse.status} ${restErr}`
+    `Persistent execute failed after v0/v1/v2 attempts. Last status: ${restResponse.status} ${restErr}`,
   );
 }
 
@@ -805,7 +749,7 @@ async function runPersistentFuzzExecutions(
   executionWorkflow: N8nWorkflow,
   originalWorkflow: N8nWorkflow,
   coverage: NodeCoverage[],
-  onLog: (msg: string) => void
+  onLog: (msg: string) => void,
 ): Promise<Issue[]> {
   const triggerName = getManualTriggerNodeName(executionWorkflow);
   if (!triggerName) return [];
@@ -847,18 +791,13 @@ async function runPersistentFuzzExecutions(
       const restResponse = await axios.post(
         `${baseUrl}/rest/workflows/${workflowId}/run`,
         body,
-        runConfig
+        runConfig,
       );
       if (restResponse.status >= 400) continue;
       if (responseIndicatesWebhookWait(restResponse.data)) continue;
       const execId = parseExecutionIdFromRunResponse(restResponse.data);
       if (!execId) continue;
-      const execData = await pollPersistentExecution(
-        baseUrl,
-        execId,
-        30_000,
-        onLog
-      );
+      const execData = await pollPersistentExecution(baseUrl, execId, 30_000, onLog);
       const traces = extractTraces(execData, originalWorkflow, coverage);
       if (traces.some((t) => t.status === "error")) {
         issues.push({
@@ -885,37 +824,33 @@ async function pollPersistentExecution(
   baseUrl: string,
   executionId: string,
   timeoutMs: number,
-  onLog: (m: string) => void
+  onLog: (m: string) => void,
 ) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
-    let response = await axios.get(
-      `${baseUrl}/rest/executions/${executionId}?includeData=true`,
-      {
+    let response = await axios.get(`${baseUrl}/rest/executions/${executionId}?includeData=true`, {
+      headers: persistentHeadersWithOptionalApiKey(),
+      auth: persistentRequestAuth(),
+      timeout: 5_000,
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) {
+      response = await axios.get(`${baseUrl}/api/v1/executions/${executionId}`, {
         headers: persistentHeadersWithOptionalApiKey(),
         auth: persistentRequestAuth(),
         timeout: 5_000,
         validateStatus: () => true,
-      }
-    );
+        params: { includeData: true },
+      });
+    }
     if (response.status >= 400) {
-      response = await axios.get(
-        `${baseUrl}/api/v1/executions/${executionId}`,
-        {
-          headers: persistentHeadersWithOptionalApiKey(),
-          auth: persistentRequestAuth(),
-          timeout: 5_000,
-          validateStatus: () => true,
-          params: { includeData: true },
-        }
+      throw new Error(
+        `Persistent execution poll failed (${response.status}): ${JSON.stringify(response.data).slice(0, 300)}`,
       );
     }
-    if (response.status >= 400) {
-      throw new Error(`Persistent execution poll failed (${response.status}): ${JSON.stringify(response.data).slice(0, 300)}`);
-    }
-    const exec = (response.data as Record<string, unknown>).data ??
-      response.data as Record<string, unknown>;
+    const exec =
+      (response.data as Record<string, unknown>).data ?? (response.data as Record<string, unknown>);
     const status = (exec as Record<string, unknown>).status;
     const finished = (exec as Record<string, unknown>).finished;
     onLog(`[sandbox] persistent execution status: ${String(status ?? finished)}`);
@@ -947,9 +882,7 @@ async function waitForN8n(baseUrl: string, timeoutMs: number, onLog: (m: string)
           break;
         }
       } catch (err) {
-        onLog(
-          `[sandbox] readiness probe #${attempts}: ${url} -> error ${(err as Error).message}`
-        );
+        onLog(`[sandbox] readiness probe #${attempts}: ${url} -> error ${(err as Error).message}`);
       }
     }
 
@@ -964,13 +897,11 @@ async function waitForN8n(baseUrl: string, timeoutMs: number, onLog: (m: string)
         });
 
         // Any non-404 means routing is initialized.
-        onLog(
-          `[sandbox] api route probe #${attempts}: /api/v1/workflows -> ${apiProbe.status}`
-        );
+        onLog(`[sandbox] api route probe #${attempts}: /api/v1/workflows -> ${apiProbe.status}`);
         if (apiProbe.status !== 404) return;
       } catch (err) {
         onLog(
-          `[sandbox] api route probe #${attempts}: /api/v1/workflows -> error ${(err as Error).message}`
+          `[sandbox] api route probe #${attempts}: /api/v1/workflows -> error ${(err as Error).message}`,
         );
       }
     }
@@ -980,11 +911,7 @@ async function waitForN8n(baseUrl: string, timeoutMs: number, onLog: (m: string)
   throw new Error("n8n sandbox did not become ready in time (120s).");
 }
 
-async function importWorkflow(
-  baseUrl: string,
-  workflow: N8nWorkflow,
-  onLog: (m: string) => void
-) {
+async function importWorkflow(baseUrl: string, workflow: N8nWorkflow, onLog: (m: string) => void) {
   for (let attempt = 1; attempt <= 10; attempt += 1) {
     try {
       onLog(`[sandbox] import request #${attempt}: POST /api/v1/workflows`);
@@ -1000,30 +927,24 @@ async function importWorkflow(
         {
           auth: { username: SANDBOX_USER, password: SANDBOX_PASS },
           timeout: 10_000,
-        }
+        },
       );
 
       const body = response.data as Record<string, unknown> | string;
-      if (
-        typeof body === "string" &&
-        body.toLowerCase().includes("starting up")
-      ) {
-        onLog(
-          `[sandbox] import response #${attempt}: n8n still starting up; retrying...`
-        );
+      if (typeof body === "string" && body.toLowerCase().includes("starting up")) {
+        onLog(`[sandbox] import response #${attempt}: n8n still starting up; retrying...`);
         await sleep(2000);
         continue;
       }
 
       const nested =
         typeof body === "object" && body !== null
-          ? ((body as Record<string, unknown>).data as Record<string, unknown> | undefined) ?? {}
+          ? (((body as Record<string, unknown>).data as Record<string, unknown> | undefined) ?? {})
           : {};
       const workflowIdRaw =
         (typeof body === "object" && body !== null
           ? (body as Record<string, unknown>).id
-          : undefined) ??
-        nested.id;
+          : undefined) ?? nested.id;
       const workflowId =
         typeof workflowIdRaw === "string" || typeof workflowIdRaw === "number"
           ? String(workflowIdRaw)
@@ -1031,7 +952,7 @@ async function importWorkflow(
 
       if (!workflowId) {
         throw new Error(
-          `Import workflow returned no workflow id. body=${JSON.stringify(response.data).slice(0, 400)}`
+          `Import workflow returned no workflow id. body=${JSON.stringify(response.data).slice(0, 400)}`,
         );
       }
 
@@ -1041,11 +962,11 @@ async function importWorkflow(
         const status = err.response?.status;
         const body = JSON.stringify(err.response?.data ?? "");
         onLog(
-          `[sandbox] import response #${attempt}: status=${status ?? "unknown"} body=${body.slice(0, 300)}`
+          `[sandbox] import response #${attempt}: status=${status ?? "unknown"} body=${body.slice(0, 300)}`,
         );
         if (status === 401 && body.includes("X-N8N-API-KEY")) {
           throw new Error(
-            "n8n API rejected basic auth and requires X-N8N-API-KEY. Create an n8n API key or pin n8n to a compatible version."
+            "n8n API rejected basic auth and requires X-N8N-API-KEY. Create an n8n API key or pin n8n to a compatible version.",
           );
         }
         if (status === 404 && attempt < 10) {
@@ -1054,11 +975,11 @@ async function importWorkflow(
         }
         if (status === 404) {
           throw new Error(
-            "n8n workflow API route returned 404 at /api/v1/workflows. The n8n API surface is not fully ready or differs for this image."
+            "n8n workflow API route returned 404 at /api/v1/workflows. The n8n API surface is not fully ready or differs for this image.",
           );
         }
         throw new Error(
-          `Import workflow failed at /api/v1/workflows with status ${status ?? "unknown"}: ${body.slice(0, 300)}`
+          `Import workflow failed at /api/v1/workflows with status ${status ?? "unknown"}: ${body.slice(0, 300)}`,
         );
       }
       throw err;
@@ -1071,14 +992,14 @@ async function executeWorkflow(
   _baseUrl: string,
   _workflowId: string,
   _workflow: N8nWorkflow,
-  _onLog: (m: string) => void
+  _onLog: (m: string) => void,
 ): Promise<string> {
   // n8n's public API (/api/v1/workflows/:id/run|execute) does not exist as a stable
   // endpoint across n8n versions. Ephemeral mode uses the pinned n8n image (0.236.2)
   // which requires the REST internal endpoint, not the public API.
   throw new Error(
     "Ephemeral sandbox execution is not supported in this build. " +
-    "Set SANDBOX_N8N_URL to use persistent sandbox mode."
+      "Set SANDBOX_N8N_URL to use persistent sandbox mode.",
   );
 }
 
@@ -1086,7 +1007,7 @@ async function pollExecution(
   baseUrl: string,
   executionId: string,
   timeoutMs: number,
-  onLog: (m: string) => void
+  onLog: (m: string) => void,
 ): Promise<Record<string, unknown>> {
   const deadline = Date.now() + timeoutMs;
   let lastStatus = "";
@@ -1094,23 +1015,20 @@ async function pollExecution(
   while (Date.now() < deadline) {
     await sleep(POLL_INTERVAL_MS);
 
-    const response = await axios.get(
-      `${baseUrl}/api/v1/executions/${executionId}`,
-      {
-        auth: { username: SANDBOX_USER, password: SANDBOX_PASS },
-        timeout: 5_000,
-        validateStatus: () => true,
-      }
-    );
+    const response = await axios.get(`${baseUrl}/api/v1/executions/${executionId}`, {
+      auth: { username: SANDBOX_USER, password: SANDBOX_PASS },
+      timeout: 5_000,
+      validateStatus: () => true,
+    });
 
     if (response.status >= 400) {
       throw new Error(
-        `Poll execution failed at /api/v1/executions/${executionId} with status ${response.status}: ${JSON.stringify(response.data).slice(0, 300)}`
+        `Poll execution failed at /api/v1/executions/${executionId} with status ${response.status}: ${JSON.stringify(response.data).slice(0, 300)}`,
       );
     }
 
     const exec = response.data.data ?? response.data;
-    const status = exec.status ?? exec.finished ? "finished" : "running";
+    const status = (exec.status ?? exec.finished) ? "finished" : "running";
 
     if (status !== lastStatus) {
       onLog(`Execution status: ${status}`);
@@ -1128,18 +1046,16 @@ async function pollExecution(
 function extractTraces(
   executionData: Record<string, unknown>,
   workflow: N8nWorkflow,
-  coverage: NodeCoverage[]
+  coverage: NodeCoverage[],
 ): NodeTrace[] {
   const traces: NodeTrace[] = [];
   const coverageMap = new Map(coverage.map((c) => [c.nodeName, c]));
 
   // n8n stores run data in data.resultData.runData keyed by node name
-  const runData =
-    (executionData.data as Record<string, unknown>)?.resultData as
-      | Record<string, unknown>
-      | undefined;
-  const nodeRunData =
-    (runData?.runData as Record<string, unknown[]>) ?? {};
+  const runData = (executionData.data as Record<string, unknown>)?.resultData as
+    | Record<string, unknown>
+    | undefined;
+  const nodeRunData = (runData?.runData as Record<string, unknown[]>) ?? {};
 
   for (const node of workflow.nodes) {
     const cov = coverageMap.get(node.name);
@@ -1175,27 +1091,20 @@ function extractTraces(
 
     // Take the last run of this node
     const lastRun = runs[runs.length - 1] as Record<string, unknown>;
-    const hasError = !!(lastRun.error);
+    const hasError = !!lastRun.error;
 
     traces.push({
       nodeId: node.id,
       nodeName: node.name,
       nodeType: node.type,
       status: hasError ? "error" : "success",
-      durationMs:
-        typeof lastRun.executionTime === "number" ? lastRun.executionTime : 0,
-      inputSummary: summarize(
-        (lastRun.data as Record<string, unknown>)?.main?.[0]?.[0] ?? null
-      ),
+      durationMs: typeof lastRun.executionTime === "number" ? lastRun.executionTime : 0,
+      inputSummary: summarize((lastRun.data as Record<string, unknown>)?.main?.[0]?.[0] ?? null),
       outputSummary: hasError
         ? null
-        : summarize(
-            (lastRun.data as Record<string, unknown>)?.main?.[0]?.[0] ?? null
-          ),
+        : summarize((lastRun.data as Record<string, unknown>)?.main?.[0]?.[0] ?? null),
       errorMessage: hasError
-        ? String(
-            (lastRun.error as Record<string, unknown>)?.message ?? "Unknown error"
-          )
+        ? String((lastRun.error as Record<string, unknown>)?.message ?? "Unknown error")
         : null,
     });
   }
@@ -1212,9 +1121,7 @@ function summarize(data: unknown): unknown {
   return data;
 }
 
-async function readEgressLog(
-  gwContainer: Dockerode.Container
-): Promise<EgressLog[]> {
+async function readEgressLog(gwContainer: Dockerode.Container): Promise<EgressLog[]> {
   try {
     const exec = await gwContainer.exec({
       Cmd: ["cat", "/tmp/egress-log.json"],
@@ -1228,7 +1135,7 @@ async function readEgressLog(
         const s = stream as NodeJS.ReadableStream;
         let data = "";
         s.on("data", (chunk: Buffer) => {
-          // Docker multiplexes stdout/stderr — skip 8-byte header
+          // Docker multiplexes stdout/stderr - skip 8-byte header
           data += chunk.slice(8).toString();
         });
         s.on("end", () => resolve(data));
@@ -1248,7 +1155,7 @@ async function safeStop(container: Dockerode.Container | null) {
     await container.stop({ t: 3 });
     await container.remove({ force: true });
   } catch {
-    // Non-fatal — container may already be gone
+    // Non-fatal - container may already be gone
   }
 }
 

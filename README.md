@@ -2,7 +2,7 @@
 
 **Production readiness verifier for n8n workflows.**
 
-Paste or upload an exported n8n workflow JSON. Drygate runs static analysis and sandbox execution, scores the workflow 0–100, and generates a prioritized remediation plan — before it breaks in production.
+Paste or upload an exported n8n workflow JSON. Drygate runs static analysis and sandbox execution, scores the workflow 0–100, and generates a prioritized remediation plan - before it breaks in production.
 
 > Built for LovHack Season 2 · March 2026
 
@@ -10,7 +10,7 @@ Paste or upload an exported n8n workflow JSON. Drygate runs static analysis and 
 
 ## What it does
 
-n8n workflows that pass every editor test regularly fail in production. Hardcoded credentials, missing error branches, credential references with no attached credential, no global error workflow — none of these surface in the n8n editor. Drygate catches them automatically.
+n8n workflows that pass every editor test regularly fail in production. Hardcoded credentials, missing error branches, credential references with no attached credential, no global error workflow - none of these surface in the n8n editor. Drygate catches them automatically.
 
 **Pipeline (four stages, runs in ~30–60s):**
 
@@ -18,10 +18,10 @@ n8n workflows that pass every editor test regularly fail in production. Hardcode
 Parse → Static Analysis → Sandbox Execution → Remediation Plan
 ```
 
-1. **Parse** — validates JSON shape, nodes array, connection graph, trigger presence
-2. **Static gate** — 20+ rules: hardcoded secrets, disconnected nodes, missing error outputs, unbounded loops, credential drift, async timeouts, global error workflow
-3. **Sandbox** — imports the workflow into an isolated n8n instance, coerces triggers to manual, executes, captures per-node traces and runtime errors
-4. **Remediation** — deterministic fix cards with step-by-step instructions and time estimates, generated from the merged issue set
+1. **Parse** - validates JSON shape, nodes array, connection graph, trigger presence
+2. **Static gate** - 20+ rules: hardcoded secrets, disconnected nodes, missing error outputs, unbounded loops, credential drift, async timeouts, global error workflow
+3. **Sandbox** - imports the workflow into an isolated n8n instance, coerces triggers to manual, executes, captures per-node traces and runtime errors
+4. **Remediation** - deterministic fix cards with step-by-step instructions and time estimates, generated from the merged issue set
 
 **Outputs:**
 
@@ -35,7 +35,6 @@ Parse → Static Analysis → Sandbox Execution → Remediation Plan
 
 ## Score bands
 
-
 | Band                 | Score  | Meaning           |
 | -------------------- | ------ | ----------------- |
 | `production_ready`   | 85–100 | Ship it           |
@@ -43,23 +42,20 @@ Parse → Static Analysis → Sandbox Execution → Remediation Plan
 | `significant_issues` | 40–64  | Major work needed |
 | `not_ready`          | 0–39   | Do not deploy     |
 
-
 **Fail-closed rule:** if `HARDCODED_SECRET`, `MISSING_TRIGGER`, `CIRCULAR_DEPENDENCY`, or `UNAUTHORIZED_EGRESS_DETECTED` is found, score is capped at 40 regardless of other findings.
 
 ---
 
 ## Tech stack
 
-
-| Layer               | Technology                                                     |
-| ------------------- | -------------------------------------------------------------- |
-| Frontend + API      | Next.js 14 (App Router)                                        |
-| Database            | Prisma + **PostgreSQL** only (`DATABASE_URL` + `DIRECT_URL` for Supabase-style poolers) |
-| Auth                | **Demo mode** — fixed `demo-user` in API/UI; no sign-in flow   |
+| Layer               | Technology                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| Frontend + API      | Next.js 14 (App Router)                                                                               |
+| Database            | Prisma + **PostgreSQL** only (`DATABASE_URL` + `DIRECT_URL` for Supabase-style poolers)               |
+| Auth                | **Demo mode** - fixed `demo-user` in API/UI; no sign-in flow                                          |
 | Sandbox             | **Persistent** n8n URL (`SANDBOX_N8N_URL`); local stack is `n8nio/n8n:latest` in `docker-compose.yml` |
-| Streaming           | Server-Sent Events (SSE)                                       |
-| Egress interception | Mock gateway container (used by local compose HTTP_PROXY to n8n) |
-
+| Streaming           | Server-Sent Events (SSE)                                                                              |
+| Egress interception | Mock gateway container (used by local compose HTTP_PROXY to n8n)                                      |
 
 ---
 
@@ -85,7 +81,7 @@ Copy the example env file:
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local` — you need a **PostgreSQL** URL (local Postgres or Supabase). Set **`DIRECT_URL`** to a direct/session connection for `prisma db push` (see `.env.local.example`).
+Edit `.env.local` - you need a **PostgreSQL** URL (local Postgres or Supabase). Set **`DIRECT_URL`** to a direct/session connection for `prisma db push` (see `.env.local.example`).
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -100,7 +96,7 @@ Push the database schema:
 npm run db:push
 ```
 
-### Start the sandbox (persistent mode — recommended)
+### Start the sandbox (persistent mode - recommended)
 
 ```bash
 docker compose up -d
@@ -132,14 +128,14 @@ Set **`SANDBOX_N8N_URL`** to the base URL of a running n8n (e.g. `http://localho
 
 ```env
 SANDBOX_N8N_URL=http://localhost:5678
-SANDBOX_N8N_API_KEY=   # optional — Settings → API in n8n
+SANDBOX_N8N_API_KEY=   # optional - Settings → API in n8n
 ```
 
 Local **`docker-compose.yml`** uses **`n8nio/n8n:latest`** (aligns with typical Docker Desktop pulls). Override the ephemeral image tag with **`SANDBOX_N8N_IMAGE`** only if you add back per-request Docker mode.
 
 ### Ephemeral (not enabled)
 
-If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** — per-request Docker + n8n is **not wired up** in the current build. Use persistent n8n only.
+If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** - per-request Docker + n8n is **not wired up** in the current build. Use persistent n8n only.
 
 ---
 
@@ -147,33 +143,27 @@ If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** — per-request 
 
 ### Required (typical)
 
-
-| Variable              | Description |
-| --------------------- | ----------- |
+| Variable              | Description                                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`        | PostgreSQL connection string (pooler ok for runtime; use `?pgbouncer=true` with Supabase transaction pooler if needed) |
-| `DIRECT_URL`          | Direct PostgreSQL URL for `prisma db push` (e.g. Supabase session pooler on `:5432`) |
-| `NEXT_PUBLIC_APP_URL` | Public base URL of the app (server-side report page fetches use this) |
-| `SANDBOX_N8N_URL`     | Base URL of persistent n8n (e.g. `http://localhost:5678`). **Required** — ephemeral mode is disabled. |
-
+| `DIRECT_URL`          | Direct PostgreSQL URL for `prisma db push` (e.g. Supabase session pooler on `:5432`)                                   |
+| `NEXT_PUBLIC_APP_URL` | Public base URL of the app (server-side report page fetches use this)                                                  |
+| `SANDBOX_N8N_URL`     | Base URL of persistent n8n (e.g. `http://localhost:5678`). **Required** - ephemeral mode is disabled.                  |
 
 ### Sandbox (optional)
 
-
-| Variable              | Description |
-| --------------------- | ----------- |
-| `SANDBOX_N8N_API_KEY` | n8n API key when using public API routes |
+| Variable              | Description                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `SANDBOX_N8N_API_KEY` | n8n API key when using public API routes                                                  |
 | `SANDBOX_N8N_IMAGE`   | Only relevant if you restore Docker-per-run sandbox (default in code: `n8nio/n8n:latest`) |
-
 
 ### Guardrails (optional)
 
-
 | Variable                                  | Description                                                                                                 |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `DRYGATE_INPUT_FUZZ`                      | `true` — runs 3 extra executions with varied trigger payloads to test input contract (persistent mode only) |
+| `DRYGATE_INPUT_FUZZ`                      | `true` - runs 3 extra executions with varied trigger payloads to test input contract (persistent mode only) |
 | `DRYGATE_PRODUCTION_CREDENTIAL_ALLOWLIST` | Comma-separated credential names that must exist in production (e.g. `Stripe Live,SendGrid Main`)           |
 | `DRYGATE_EGRESS_ALLOWLIST`                | Comma-separated hostnames allowed for outbound HTTP (ephemeral mode only, requires mock gateway proxy)      |
-
 
 ---
 
@@ -181,29 +171,27 @@ If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** — per-request 
 
 ### Stack
 
-
 | Service     | Platform               | Cost         |
 | ----------- | ---------------------- | ------------ |
 | Next.js app | Railway                | ~$2–3/mo     |
 | n8n sandbox | Railway (Docker image) | ~$2–3/mo     |
 | Database    | Supabase               | Free (500MB) |
 
-
 Use a **public HTTPS URL** for n8n if private networking to the app is unreliable; set `SANDBOX_N8N_URL` to that URL. See **`docs/DEPLOYMENT.md`** for full detail.
 
-### Step 1 — Supabase
+### Step 1 - Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
 2. **Transaction pooler** (often port `6543`) → `DATABASE_URL` (add `?pgbouncer=true` if Prisma reports prepared-statement errors)
 3. **Session / direct** (often port `5432`) → `DIRECT_URL` for `prisma db push`
 
-### Step 2 — Railway: n8n service
+### Step 2 - Railway: n8n service
 
 1. New project → **Dockerfile** from repo **`railway-n8n.dockerfile`** (or equivalent), **or** image `n8nio/n8n:latest` with the same env ideas as the Dockerfile.
 2. Add a volume on `/home/node/.n8n` so the instance owner and data survive restarts.
 3. **`N8N_SECURE_COOKIE=false`** is set in `railway-n8n.dockerfile` so session cookies work behind Railway’s HTTP proxy.
 
-### Step 3 — Railway: Next.js app
+### Step 3 - Railway: Next.js app
 
 1. **Add Service → GitHub repo** → select this repo
 2. Copy variables from **`.env.production.example`** and set **`SANDBOX_N8N_URL`** to a URL the Next service can reach (internal hostname or public n8n URL)
@@ -211,7 +199,7 @@ Use a **public HTTPS URL** for n8n if private networking to the app is unreliabl
 
 ```toml
 [deploy]
-startCommand = "npx prisma db push --skip-generate || echo '[railway] prisma db push failed — check DATABASE_URL / DIRECT_URL env vars' ; npm run start -- -p ${PORT:-3000}"
+startCommand = "npx prisma db push --skip-generate || echo '[railway] prisma db push failed - check DATABASE_URL / DIRECT_URL env vars' ; npm run start -- -p ${PORT:-3000}"
 ```
 
 ### Environment variables for production (minimal)
@@ -235,10 +223,10 @@ drygate/
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── verify/
-│   │   │   │   ├── route.ts          # POST — starts pipeline
+│   │   │   │   ├── route.ts          # POST - starts pipeline
 │   │   │   │   └── [id]/
-│   │   │   │       ├── route.ts      # GET — terminal snapshot
-│   │   │   │       └── stream/       # GET — SSE stream
+│   │   │   │       ├── route.ts      # GET - terminal snapshot
+│   │   │   │       └── stream/       # GET - SSE stream
 │   │   │   ├── report/[shareToken]/  # Public report API
 │   │   │   └── history/
 │   │   │       ├── route.ts          # GET list, DELETE all (demo-user)
@@ -247,8 +235,9 @@ drygate/
 │   │   ├── how-it-works/             # Product walkthrough
 │   │   ├── report/[shareToken]/      # Shareable report page
 │   │   ├── dashboard/                # History + delete controls (client)
-│   │   ├── layout.tsx                # Header + Footer
-│   │   └── page.tsx                  # Landing (see also (marketing)/ if consolidating)
+│   │   ├── (marketing)/
+│   │   │   └── page.tsx              # Landing (/)
+│   │   └── layout.tsx                # Header + Footer
 │   ├── lib/
 │   │   ├── validator/                # Static analysis
 │   │   │   ├── index.ts              # Orchestrator
@@ -299,7 +288,6 @@ Starts at 100 and deducts per finding.
 
 ### Static deductions (selected)
 
-
 | Issue code                     | Deduction | Notes              |
 | ------------------------------ | --------- | ------------------ |
 | `MISSING_TRIGGER`              | 25        | Fail-closed        |
@@ -318,14 +306,11 @@ Starts at 100 and deducts per finding.
 | `DISCONNECTED_NODE`            | 5         | Capped at 20 total |
 | `LONG_SYNCHRONOUS_WAIT`        | 5         |                    |
 
-
 ### Runtime deductions
-
 
 | Issue code                | Deduction   | Notes              |
 | ------------------------- | ----------- | ------------------ |
 | `NODE_ERRORED_IN_SANDBOX` | 15 per node | Capped at 30 total |
-
 
 ### Blocked coverage penalty
 
@@ -355,25 +340,24 @@ Start a verification.
 
 SSE stream. The server emits **default `message` events** with JSON bodies shaped as `{ "type": "...", "payload": { ... } }`. Common `type` values:
 
-| `type`                  | When                        |
-| ----------------------- | --------------------------- |
-| `stage_update`          | Pipeline stage changes      |
-| `static_complete`       | Static analysis done        |
-| `sandbox_start`         | Sandbox beginning           |
-| `sandbox_log`           | Live sandbox log line       |
-| `runtime_complete`      | Sandbox execution finished  |
-| `verification_complete` | Full pipeline done          |
-| `pipeline_error`        | Fatal error                 |
-| `stream_end`            | Stream closing              |
-
+| `type`                  | When                       |
+| ----------------------- | -------------------------- |
+| `stage_update`          | Pipeline stage changes     |
+| `static_complete`       | Static analysis done       |
+| `sandbox_start`         | Sandbox beginning          |
+| `sandbox_log`           | Live sandbox log line      |
+| `runtime_complete`      | Sandbox execution finished |
+| `verification_complete` | Full pipeline done         |
+| `pipeline_error`        | Fatal error                |
+| `stream_end`            | Stream closing             |
 
 ### GET `/api/verify/:id`
 
-Terminal snapshot — final score, issues, reports.
+Terminal snapshot - final score, issues, reports.
 
 ### GET `/api/report/:shareToken`
 
-Public report — no auth required.
+Public report - no auth required.
 
 ### `GET /api/history` · `DELETE /api/history` · `DELETE /api/history/:id`
 
@@ -388,10 +372,10 @@ Liveness / diagnostics (deployment debugging).
 ## Known limits
 
 - Scoring is heuristic, not a formal proof of production safety
-- Sandbox cannot validate real credentials — credential-dependent nodes may be `credential_blocked` or error at runtime
+- Sandbox cannot validate real credentials - credential-dependent nodes may be `credential_blocked` or error at runtime
 - **Ephemeral** Docker-per-request sandbox is **disabled**; use persistent n8n only
 - **Egress allowlist** guardrails assume traffic can be observed (mock gateway path); persistent public n8n won’t see the same proxy setup
-- Very new n8n exports can still surface import/API quirks — pin n8n if you need a frozen baseline
+- Very new n8n exports can still surface import/API quirks - pin n8n if you need a frozen baseline
 
 ---
 
@@ -400,39 +384,39 @@ Liveness / diagnostics (deployment debugging).
 The current sandbox has a fundamental coverage gap: credential-dependent nodes
 (Gmail, Slack, OpenAI, Postgres, etc.) are classified `credential_blocked` and
 skipped entirely. For most real-world workflows this means 0–8% simulation
-coverage — the sandbox runs but finds nothing new beyond static analysis.
+coverage - the sandbox runs but finds nothing new beyond static analysis.
 
 The fix is not a better sandbox. It is replacing sandbox dependency with three
 new analysis layers that together produce 80%+ coverage on any workflow,
 including credential-heavy ones.
 
-### Layer 1 — Expression analyzer
+### Layer 1 - Expression analyzer
 
 Every n8n node parameter can contain `{{ }}` expressions. Static analysis
 currently ignores them. The expression analyzer will parse every expression
 across every node and flag:
 
-- Null reference access on optional fields —
-`{{ $json.user.email }}` with no null guard
-- Array index access without length check —
-`{{ $json.items[0].id }}` when `items` can be empty
-- Missing fallback operators —
-`{{ $json.name }}` instead of `{{ $json.name ?? "Unknown" }}`
+- Null reference access on optional fields -
+  `{{ $json.user.email }}` with no null guard
+- Array index access without length check -
+  `{{ $json.items[0].id }}` when `items` can be empty
+- Missing fallback operators -
+  `{{ $json.name }}` instead of `{{ $json.name ?? "Unknown" }}`
 - Cross-node references to nodes not reachable in the current execution path
 
 This catches the class of bugs that causes the most production crashes and
 requires no execution at all. Static analysis of expressions is a capability
 no existing n8n linter has.
 
-### Layer 2 — pinData simulation
+### Layer 2 - pinData simulation
 
 n8n's official `pinData` feature lets you inject synthetic output into any node
 so downstream nodes receive it and execute normally. This is exactly what the
 n8n editor uses for testing.
 
 For every credential-blocked node in a workflow, Drygate will generate
-realistic synthetic output based on the node type — Gmail returns a message
-object, Postgres returns rows, OpenAI returns a completion — and inject it as
+realistic synthetic output based on the node type - Gmail returns a message
+object, Postgres returns rows, OpenAI returns a completion - and inject it as
 `pinData`. The full downstream chain then executes against real data flow.
 
 Estimated coverage improvement: 8% → 70–90% on typical integration workflows.
@@ -441,7 +425,7 @@ No credentials required. No Docker required. Works on Vercel.
 The pinData generator needs coverage for approximately 30 node types to cover
 80% of community workflows.
 
-### Layer 3 — AI simulation
+### Layer 3 - AI simulation
 
 For workflows where even pinData cannot produce meaningful coverage (complex
 branching, dynamic expressions, AI agent chains), Drygate will send the full
@@ -455,36 +439,34 @@ workflow JSON plus node type registry to Claude and ask it to:
 This produces findings similar to runtime traces without requiring any
 execution. One API call per workflow.
 
-### Layer 4 — Security expression scanning
+### Layer 4 - Security expression scanning
 
 n8n has had five critical RCE vulnerabilities in the last four months
 (CVE-2025-68613, CVE-2026-27577, CVE-2026-27493, CVE-2026-27495,
-CVE-2026-27497) — all from unsafe expression evaluation. Over 100,000
+CVE-2026-27497) - all from unsafe expression evaluation. Over 100,000
 vulnerable instances were identified on the internet.
 
 Drygate will add a dedicated security layer:
 
 - Scan every `{{ }}` expression for patterns matching known injection vectors
 - Flag Code nodes using constructs that have historically enabled sandbox
-escapes (prototype chain access, `process.mainModule`, `child_process`)
+  escapes (prototype chain access, `process.mainModule`, `child_process`)
 - Flag Form trigger nodes exposed publicly (the CVE-2026-27493 attack surface)
 - Check workflow metadata for n8n version references against the known CVE
-timeline
+  timeline
 
-This turns Drygate from a quality gate into a security gate — a distinct value
+This turns Drygate from a quality gate into a security gate - a distinct value
 proposition for enterprise teams running self-hosted n8n at scale.
 
 ### Coverage projection
 
-
 | Layer                     | Adds to coverage                       | Applies to                               |
 | ------------------------- | -------------------------------------- | ---------------------------------------- |
-| Static analysis (current) | —                                      | 100% of workflows                        |
+| Static analysis (current) | -                                      | 100% of workflows                        |
 | Expression analyzer       | +15–20 score pts on affected workflows | 100% of workflows                        |
 | pinData simulation        | 8% → 70–90% coverage                   | All workflows including credential-heavy |
 | AI simulation             | Catches logic errors                   | Workflows with complex branching         |
 | Security scanning         | New issue class                        | All workflows                            |
-
 
 **Estimated build time:** 10 focused days to ship all four layers as a complete
 product.
@@ -497,4 +479,4 @@ MIT
 
 ---
 
-*Drygate — Ship n8n workflows without guessing.*
+_Drygate - Ship n8n workflows without guessing._

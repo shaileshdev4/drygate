@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { shareToken: string } }
-) {
+export async function GET(_req: NextRequest, { params }: { params: { shareToken: string } }) {
   const record = await prisma.verification.findUnique({
     where: { shareToken: params.shareToken },
   });
@@ -23,15 +20,9 @@ export async function GET(
     readinessScore: record.readinessScore,
     scoreband: record.scoreband,
     simulationCoverage: record.simulationCoverage,
-    staticReport: record.staticReportJson
-      ? JSON.parse(record.staticReportJson)
-      : null,
-    runtimeReport: record.runtimeReportJson
-      ? JSON.parse(record.runtimeReportJson)
-      : null,
-    remediationPlan: record.remediationJson
-      ? JSON.parse(record.remediationJson)
-      : null,
+    staticReport: record.staticReportJson ? JSON.parse(record.staticReportJson) : null,
+    runtimeReport: record.runtimeReportJson ? JSON.parse(record.runtimeReportJson) : null,
+    remediationPlan: record.remediationJson ? JSON.parse(record.remediationJson) : null,
     pipelineError: record.pipelineError,
   });
 }

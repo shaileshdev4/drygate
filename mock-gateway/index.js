@@ -6,10 +6,10 @@ const app = express();
 const PORT = process.env.GATEWAY_PORT || 4000;
 const LOG_FILE = process.env.LOG_FILE || "/tmp/egress-log.json";
 
-// In-memory log — flushed to disk periodically
+// In-memory log - flushed to disk periodically
 const egressLog = [];
 
-// Known destructive URL patterns — return 403
+// Known destructive URL patterns - return 403
 const DESTRUCTIVE_PATTERNS = [
   /mail\.google\.com/i,
   /smtp\./i,
@@ -33,7 +33,7 @@ app.use(express.text({ type: "*/*", limit: "10mb" }));
 // Handle CONNECT for HTTPS tunneling
 app.use((req, res, next) => {
   if (req.method === "CONNECT") {
-    // For HTTPS proxying — just send 200 and let the TLS flow
+    // For HTTPS proxying - just send 200 and let the TLS flow
     res.writeHead(200, "Connection Established");
     res.end();
     return;
@@ -41,12 +41,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Main intercept handler — catches all requests.
+// Main intercept handler - catches all requests.
 // Use app.use() to stay compatible with both Express 4 and 5.
 app.use((req, res) => {
-  const targetUrl = req.url.startsWith("http")
-    ? req.url
-    : `http://${req.headers.host}${req.url}`;
+  const targetUrl = req.url.startsWith("http") ? req.url : `http://${req.headers.host}${req.url}`;
 
   const method = req.method;
   const destructive = isDestructive(targetUrl, method);
@@ -70,7 +68,7 @@ app.use((req, res) => {
   if (destructive) {
     console.log(`[MOCK-GATEWAY] BLOCKED destructive: ${method} ${targetUrl}`);
     return res.status(403).json({
-      error: "Blocked by Drygate mock gateway — destructive operation",
+      error: "Blocked by Drygate mock gateway - destructive operation",
       url: targetUrl,
       method,
     });
@@ -107,7 +105,7 @@ function buildMockResponse(method, url) {
 }
 
 function filterSafeHeaders(headers) {
-  // Don't log authorization headers — even though they're mocks
+  // Don't log authorization headers - even though they're mocks
   const safe = { ...headers };
   delete safe.authorization;
   delete safe["x-api-key"];
@@ -128,7 +126,7 @@ app.listen(PORT, () => {
   console.log(`[MOCK-GATEWAY] Logging to ${LOG_FILE}`);
 });
 
-// Graceful shutdown — ensure final log flush
+// Graceful shutdown - ensure final log flush
 process.on("SIGTERM", () => {
   flushLog();
   process.exit(0);

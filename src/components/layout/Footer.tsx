@@ -79,7 +79,8 @@ export function Footer() {
               maxWidth: 320,
             }}
           >
-            Production readiness gate for n8n workflows. Static analysis + sandbox execution + prioritized fix plan.
+            Production readiness gate for n8n workflows. Static analysis + sandbox execution +
+            prioritized fix plan.
           </p>
           <p
             style={{
@@ -89,7 +90,7 @@ export function Footer() {
               fontFamily: "var(--font-data)",
             }}
           >
-            Score is heuristic — not a formal proof of safety. Use as a pre-flight signal.
+            Score is heuristic - not a formal proof of safety. Use as a pre-flight signal.
           </p>
         </div>
 
@@ -155,7 +156,7 @@ export function Footer() {
             fontFamily: "var(--font-data)",
           }}
         >
-          Demo build — requires Docker + n8n sandbox
+          Demo build - requires Docker + n8n sandbox
         </span>
       </div>
     </footer>

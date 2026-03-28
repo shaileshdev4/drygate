@@ -22,7 +22,7 @@ If **any** variant produces a **node error** in traces, we emit `INPUT_CONTRACT_
 **Limits**
 
 - **Ephemeral** Docker mode does not run fuzz yet (same API could be wired later).
-- This is **not** a full JSON Schema validator — it is **shape perturbation** to catch common null/empty failures.
+- This is **not** a full JSON Schema validator - it is **shape perturbation** to catch common null/empty failures.
 - **Optional next step:** accept `meta.drygateInputSchema` (JSON Schema) on the workflow and validate/fuzz against that schema first.
 
 ---
@@ -39,7 +39,7 @@ If **any** variant produces a **node error** in traces, we emit `INPUT_CONTRACT_
 
 **Limits**
 
-- Does not call n8n’s API to prove the credential exists — it is a **declared allowlist** for the gate (CI/deploy sets the list).
+- Does not call n8n’s API to prove the credential exists - it is a **declared allowlist** for the gate (CI/deploy sets the list).
 
 ---
 
@@ -55,7 +55,7 @@ If **any** variant produces a **node error** in traces, we emit `INPUT_CONTRACT_
 
 **Limits**
 
-- **Persistent** n8n without HTTP proxy through the gateway produces **no egress log** — policy is skipped unless traffic is captured. Documented operational requirement: use ephemeral sandbox or attach a proxy/logger for enforcement.
+- **Persistent** n8n without HTTP proxy through the gateway produces **no egress log** - policy is skipped unless traffic is captured. Documented operational requirement: use ephemeral sandbox or attach a proxy/logger for enforcement.
 
 ---
 
@@ -71,23 +71,23 @@ If **any** variant produces a **node error** in traces, we emit `INPUT_CONTRACT_
 **Limits**
 
 - n8n parameter shapes differ by **typeVersion**; we check common locations (`options.timeout` / root `timeout`).
-- Global n8n **execution** timeout is not read from the workflow JSON here — only node-level hints.
+- Global n8n **execution** timeout is not read from the workflow JSON here - only node-level hints.
 
 ---
 
 ## Environment variables (summary)
 
-| Variable | Purpose |
-|----------|---------|
-| `DRYGATE_INPUT_FUZZ` | `true` / `1` — enable trigger pinData fuzz (persistent only) |
-| `DRYGATE_PRODUCTION_CREDENTIAL_ALLOWLIST` | Allowlisted credential **names** |
-| `DRYGATE_EGRESS_ALLOWLIST` | Allowlisted outbound **hostnames** (optional `*.suffix.com` style entries) |
+| Variable                                  | Purpose                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `DRYGATE_INPUT_FUZZ`                      | `true` / `1` - enable trigger pinData fuzz (persistent only)               |
+| `DRYGATE_PRODUCTION_CREDENTIAL_ALLOWLIST` | Allowlisted credential **names**                                           |
+| `DRYGATE_EGRESS_ALLOWLIST`                | Allowlisted outbound **hostnames** (optional `*.suffix.com` style entries) |
 
 ---
 
 ## Which JSON schema to define first?
 
-If you add **one** schema product: **`meta.drygateInputSchema`** on the workflow object — a **JSON Schema** for the **trigger output** (after webhook body / manual payload). That lets you:
+If you add **one** schema product: **`meta.drygateInputSchema`** on the workflow object - a **JSON Schema** for the **trigger output** (after webhook body / manual payload). That lets you:
 
 1. **Statically** reject invalid shapes before sandbox.
 2. **Generate fuzz cases** from schema (optional fields, nulls, empty arrays) instead of fixed three variants.

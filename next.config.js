@@ -5,5 +5,5 @@ const nextConfig = {
     instrumentationHook: true,
   },
 };
-  
-  module.exports = nextConfig;
+
+module.exports = nextConfig;

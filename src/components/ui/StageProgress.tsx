@@ -17,11 +17,7 @@ interface StageProgressProps {
   failed?: boolean;
 }
 
-export function StageProgress({
-  currentStage,
-  completedStages,
-  failed,
-}: StageProgressProps) {
+export function StageProgress({ currentStage, completedStages, failed }: StageProgressProps) {
   return (
     <div className="flex items-center gap-0">
       {STAGES.map((stage, i) => {
@@ -57,13 +53,18 @@ export function StageProgress({
                 style={{
                   background: dotBg,
                   border: `1.5px solid ${dotBorder}`,
-                  boxShadow: isActive && !failed
-                    ? "0 0 12px rgba(255,255,255,0.1)"
-                    : undefined,
+                  boxShadow: isActive && !failed ? "0 0 12px rgba(255,255,255,0.1)" : undefined,
                 }}
               >
                 {isComplete ? (
-                  <svg className="w-4 h-4" style={{ color: "var(--green)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg
+                    className="w-4 h-4"
+                    style={{ color: "var(--green)" }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 ) : isActive && !failed ? (
@@ -75,20 +76,27 @@ export function StageProgress({
                     }}
                   />
                 ) : failed && isActive ? (
-                  <svg className="w-4 h-4" style={{ color: "var(--red)" }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <svg
+                    className="w-4 h-4"
+                    style={{ color: "var(--red)" }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 ) : (
-                  <div className="w-2 h-2 rounded-full" style={{ background: "var(--border-plus)" }} />
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: "var(--border-plus)" }}
+                  />
                 )}
               </div>
 
               {/* Label */}
               <div className="text-center">
-                <div
-                  className="text-xs font-semibold leading-tight"
-                  style={{ color }}
-                >
+                <div className="text-xs font-semibold leading-tight" style={{ color }}>
                   {stage.label}
                 </div>
                 <div
@@ -105,9 +113,7 @@ export function StageProgress({
               <div
                 className="flex-1 h-px mx-1 transition-all duration-500"
                 style={{
-                  background: isComplete
-                    ? "var(--green)"
-                    : "var(--border)",
+                  background: isComplete ? "var(--green)" : "var(--border)",
                   opacity: isComplete ? 0.5 : 1,
                 }}
               />

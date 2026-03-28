@@ -27,9 +27,7 @@ export function GateStatus({
       />
       <div className="relative flex items-start justify-between gap-4">
         <div>
-          <div className="text-xs uppercase tracking-widest text-muted">
-            Production Gate
-          </div>
+          <div className="text-xs uppercase tracking-widest text-muted">Production Gate</div>
           <div className="mt-1 text-lg font-semibold" style={{ color }}>
             {label}
           </div>
@@ -48,4 +46,3 @@ export function GateStatus({
     </div>
   );
 }
-

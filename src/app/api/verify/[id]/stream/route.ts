@@ -10,12 +10,13 @@ function sseSandboxLogChunksFromRuntimeJson(runtimeReportJson: string | null): s
     const ts = () => new Date().toISOString();
     return rt.executionLog
       .filter((l): l is string => typeof l === "string" && l.length > 0)
-      .map((message) =>
-        `data: ${JSON.stringify({
-          type: "sandbox_log",
-          timestamp: ts(),
-          payload: { message },
-        })}\n\n`
+      .map(
+        (message) =>
+          `data: ${JSON.stringify({
+            type: "sandbox_log",
+            timestamp: ts(),
+            payload: { message },
+          })}\n\n`,
       )
       .join("");
   } catch {
@@ -23,10 +24,7 @@ function sseSandboxLogChunksFromRuntimeJson(runtimeReportJson: string | null): s
   }
 }
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params;
 
   // Verify the record exists
@@ -56,22 +54,15 @@ export async function GET(
         status: record.status,
         readinessScore: record.readinessScore,
         scoreband: record.scoreband,
-        staticReport: record.staticReportJson
-          ? JSON.parse(record.staticReportJson)
-          : null,
-        runtimeReport: record.runtimeReportJson
-          ? JSON.parse(record.runtimeReportJson)
-          : null,
-        remediationPlan: record.remediationJson
-          ? JSON.parse(record.remediationJson)
-          : null,
+        staticReport: record.staticReportJson ? JSON.parse(record.staticReportJson) : null,
+        runtimeReport: record.runtimeReportJson ? JSON.parse(record.runtimeReportJson) : null,
+        remediationPlan: record.remediationJson ? JSON.parse(record.remediationJson) : null,
         pipelineError: record.pipelineError ?? null,
       },
     });
 
     const logReplay = sseSandboxLogChunksFromRuntimeJson(record.runtimeReportJson);
-    const body =
-      logReplay + `data: ${finalData}\n\ndata: {"type":"stream_end"}\n\n`;
+    const body = logReplay + `data: ${finalData}\n\ndata: {"type":"stream_end"}\n\n`;
 
     return new Response(body, { headers: sseHeaders });
   }
@@ -91,7 +82,9 @@ export async function GET(
         }
       };
 
-      const sendFinalFromRecord = (finalRecord: Awaited<ReturnType<typeof prisma.verification.findUnique>>) => {
+      const sendFinalFromRecord = (
+        finalRecord: Awaited<ReturnType<typeof prisma.verification.findUnique>>,
+      ) => {
         if (!finalRecord) return;
         const finalData = JSON.stringify({
           type: finalRecord.status === "failed" ? "pipeline_error" : "verification_complete",
@@ -158,7 +151,11 @@ export async function GET(
         const idx = listeners.indexOf(send);
         if (idx !== -1) listeners.splice(idx, 1);
         if (listeners.length === 0) sseStreams.delete(id);
-        try { controller.close(); } catch { /* already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* already closed */
+        }
       };
 
       // Auto-cleanup after 3 minutes regardless

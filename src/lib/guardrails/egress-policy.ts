@@ -1,7 +1,7 @@
 import { EgressLog, Issue } from "@/types";
 
 /**
- * DRYGATE_EGRESS_ALLOWLIST — comma-separated **hostnames** (no scheme), e.g.
+ * DRYGATE_EGRESS_ALLOWLIST - comma-separated **hostnames** (no scheme), e.g.
  * `api.stripe.com,hooks.slack.com,api.openai.com`
  *
  * When unset, egress policy checks are **skipped** (typical for persistent n8n without mock gateway).

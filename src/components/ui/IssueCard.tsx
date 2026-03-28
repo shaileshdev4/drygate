@@ -44,4 +44,3 @@ export function IssueCard({ issue }: { issue: Issue }) {
     </div>
   );
 }
-

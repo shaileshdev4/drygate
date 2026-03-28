@@ -23,7 +23,7 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
       const parsed = JSON.parse(raw);
       if (!parsed.nodes || !parsed.connections) {
         setError(
-          'This doesn\'t look like an n8n workflow. Make sure you exported via "Download" from the n8n workflow editor.'
+          'This doesn\'t look like an n8n workflow. Make sure you exported via "Download" from the n8n workflow editor.',
         );
         return;
       }
@@ -50,7 +50,7 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
       const file = e.dataTransfer.files[0];
       if (file) handleFile(file);
     },
-    [handleFile]
+    [handleFile],
   );
 
   async function loadSample() {
@@ -80,7 +80,7 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
               "flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200",
               mode === m
                 ? "bg-[var(--surface)] text-[var(--text)] shadow-sm"
-                : "text-[var(--text-muted)] hover:text-[var(--text-2)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-2)]",
             )}
           >
             {m === "drop" ? "Upload File" : "Paste JSON"}
@@ -91,13 +91,16 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
       {/* Drop zone */}
       {mode === "drop" && (
         <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => !disabled && fileRef.current?.click()}
           className={cn(
             "relative rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200",
-            dragging && "scale-[1.01]"
+            dragging && "scale-[1.01]",
           )}
           style={{
             height: 200,
@@ -127,14 +130,22 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
               <svg
                 className="w-6 h-6"
                 style={{ color: dragging ? "var(--green)" : "var(--text-muted)" }}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
               >
-                <path strokeLinecap="round" strokeLinejoin="round"
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
                 />
               </svg>
             </div>
-            <div className="text-sm font-medium" style={{ color: dragging ? "var(--green)" : "var(--text)" }}>
+            <div
+              className="text-sm font-medium"
+              style={{ color: dragging ? "var(--green)" : "var(--text)" }}
+            >
               {dragging ? "Drop it" : "Drop your workflow JSON here"}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
@@ -186,7 +197,10 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
           />
           {pasteValue && (
             <button
-              onClick={() => { setPasteValue(""); setError(null); }}
+              onClick={() => {
+                setPasteValue("");
+                setError(null);
+              }}
               className="absolute top-3 right-3 text-xs"
               style={{ color: "var(--text-muted)" }}
             >
@@ -206,8 +220,18 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
             color: "var(--red)",
           }}
         >
-          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+          <svg
+            className="w-4 h-4 flex-shrink-0 mt-0.5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"
+            />
           </svg>
           {error}
         </div>
@@ -225,8 +249,18 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
             disabled={disabled || !pasteValue.trim()}
             onClick={() => parseAndSubmit(pasteValue)}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             Verify Workflow
           </button>

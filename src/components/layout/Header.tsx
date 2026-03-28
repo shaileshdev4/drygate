@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
-  { href: "/verify",       label: "Verify"       },
-  { href: "/dashboard",    label: "History"      },
+  { href: "/verify", label: "Verify" },
+  { href: "/dashboard", label: "History" },
   { href: "/how-it-works", label: "How it works" },
 ];
 
@@ -107,7 +107,8 @@ export function Header() {
                 onMouseEnter={(e) => {
                   if (!active) {
                     (e.currentTarget as HTMLAnchorElement).style.color = "var(--text, #eeeaf8)";
-                    (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.04)";
+                    (e.currentTarget as HTMLAnchorElement).style.background =
+                      "rgba(255,255,255,0.04)";
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -136,9 +137,13 @@ export function Header() {
           })}
         </nav>
 
-        {/* Right — CTA */}
+        {/* Right - CTA */}
         <div style={{ flexShrink: 0 }}>
-          <Link href="/verify" className="btn-primary" style={{ padding: "8px 18px", fontSize: 13 }}>
+          <Link
+            href="/verify"
+            className="btn-primary"
+            style={{ padding: "8px 18px", fontSize: 13 }}
+          >
             Get started
           </Link>
         </div>

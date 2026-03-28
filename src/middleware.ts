@@ -13,7 +13,7 @@ export function middleware(req: NextRequest) {
       method,
       path,
       ts: new Date().toISOString(),
-    })
+    }),
   );
 
   const res = NextResponse.next();

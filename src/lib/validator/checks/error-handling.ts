@@ -21,10 +21,7 @@ const HIGH_RISK_TYPES = [
   "n8n-nodes-base.gmail",
 ];
 
-function hasErrorOutputConnected(
-  nodeName: string,
-  connections: N8nConnections
-): boolean {
+function hasErrorOutputConnected(nodeName: string, connections: N8nConnections): boolean {
   const nodeConnections = connections[nodeName];
   if (!nodeConnections) return false;
 
@@ -33,9 +30,7 @@ function hasErrorOutputConnected(
   if (!errorOutputs) return false;
 
   // Check if any error output actually connects to something
-  return errorOutputs.some(
-    (group) => Array.isArray(group) && group.length > 0
-  );
+  return errorOutputs.some((group) => Array.isArray(group) && group.length > 0);
 }
 
 export function runErrorHandlingChecks(workflow: N8nWorkflow): Issue[] {
@@ -43,10 +38,7 @@ export function runErrorHandlingChecks(workflow: N8nWorkflow): Issue[] {
   let hasGlobalErrorWorkflow = false;
 
   // Check workflow-level error workflow setting
-  if (
-    workflow.settings &&
-    (workflow.settings as Record<string, unknown>).errorWorkflow
-  ) {
+  if (workflow.settings && (workflow.settings as Record<string, unknown>).errorWorkflow) {
     hasGlobalErrorWorkflow = true;
   }
 
@@ -54,16 +46,13 @@ export function runErrorHandlingChecks(workflow: N8nWorkflow): Issue[] {
     if (node.disabled) continue;
 
     const isHighRisk = HIGH_RISK_TYPES.some((t) =>
-      node.type.toLowerCase().includes(t.toLowerCase())
+      node.type.toLowerCase().includes(t.toLowerCase()),
     );
 
     if (!isHighRisk) continue;
 
     const hasContinueOnFail = node.continueOnFail === true;
-    const hasErrorOutput = hasErrorOutputConnected(
-      node.name,
-      workflow.connections
-    );
+    const hasErrorOutput = hasErrorOutputConnected(node.name, workflow.connections);
 
     if (!hasContinueOnFail && !hasErrorOutput) {
       issues.push({
@@ -81,7 +70,7 @@ export function runErrorHandlingChecks(workflow: N8nWorkflow): Issue[] {
 
   // Workflow-level: if no global error workflow and there are high-risk nodes
   const highRiskNodes = workflow.nodes.filter((n) =>
-    HIGH_RISK_TYPES.some((t) => n.type.toLowerCase().includes(t.toLowerCase()))
+    HIGH_RISK_TYPES.some((t) => n.type.toLowerCase().includes(t.toLowerCase())),
   );
 
   if (!hasGlobalErrorWorkflow && highRiskNodes.length > 0) {

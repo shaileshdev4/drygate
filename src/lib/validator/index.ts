@@ -42,14 +42,14 @@ export function validateWorkflow(rawJson: unknown): ValidatorResult {
   runCheck("performance", runPerformanceChecks(workflow));
 
   const simulatableCount = coverage.filter(
-    (c) => c.class === "fully_simulatable" || c.class === "mock_intercepted"
+    (c) => c.class === "fully_simulatable" || c.class === "mock_intercepted",
   ).length;
 
   const blockedCount = coverage.filter(
     (c) =>
       c.class === "credential_blocked" ||
       c.class === "destructive_blocked" ||
-      c.class === "structural_only"
+      c.class === "structural_only",
   ).length;
 
   const report: StaticReport = {
@@ -75,14 +75,12 @@ function parseAndValidateInput(raw: unknown): N8nWorkflow {
 
   if (!Array.isArray(obj.nodes)) {
     throw new Error(
-      'Invalid n8n workflow JSON: missing "nodes" array. Make sure you exported a workflow (not a credential or other resource) from n8n.'
+      'Invalid n8n workflow JSON: missing "nodes" array. Make sure you exported a workflow (not a credential or other resource) from n8n.',
     );
   }
 
   if (!obj.connections || typeof obj.connections !== "object") {
-    throw new Error(
-      'Invalid n8n workflow JSON: missing "connections" object.'
-    );
+    throw new Error('Invalid n8n workflow JSON: missing "connections" object.');
   }
 
   // Ensure every node has required fields
@@ -91,8 +89,8 @@ function parseAndValidateInput(raw: unknown): N8nWorkflow {
     if (!n.id || !n.name || !n.type) {
       throw new Error(
         `Malformed node found: every node must have id, name, and type. Got: ${JSON.stringify(
-          node
-        ).substring(0, 100)}`
+          node,
+        ).substring(0, 100)}`,
       );
     }
   }

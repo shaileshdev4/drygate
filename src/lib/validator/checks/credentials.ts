@@ -10,19 +10,16 @@ const SECRET_PATTERNS = [
   /authorization["\s]*[:=]["\s]*[a-zA-Z0-9\-_.]{16,}/i,
   /private[_-]?key/i,
   /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/,
-  /sk-[a-zA-Z0-9]{20,}/,       // OpenAI-style keys
-  /xoxb-[0-9]+-/,              // Slack bot tokens
-  /ghp_[a-zA-Z0-9]{36}/,       // GitHub PATs
-  /AIza[0-9A-Za-z-_]{35}/,     // Google API keys
+  /sk-[a-zA-Z0-9]{20,}/, // OpenAI-style keys
+  /xoxb-[0-9]+-/, // Slack bot tokens
+  /ghp_[a-zA-Z0-9]{36}/, // GitHub PATs
+  /AIza[0-9A-Za-z-_]{35}/, // Google API keys
 ];
 
 /**
  * Recursively walk a value tree and return paths where secrets look hardcoded.
  */
-function findSecretsInValue(
-  value: unknown,
-  path: string
-): Array<{ path: string; reason: string }> {
+function findSecretsInValue(value: unknown, path: string): Array<{ path: string; reason: string }> {
   const findings: Array<{ path: string; reason: string }> = [];
 
   if (typeof value === "string") {
@@ -40,9 +37,7 @@ function findSecretsInValue(
       findings.push(...findSecretsInValue(item, `${path}[${i}]`));
     });
   } else if (value !== null && typeof value === "object") {
-    for (const [key, val] of Object.entries(
-      value as Record<string, unknown>
-    )) {
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       findings.push(...findSecretsInValue(val, `${path}.${key}`));
     }
   }
@@ -55,10 +50,7 @@ export function runCredentialChecks(workflow: N8nWorkflow): Issue[] {
 
   for (const node of workflow.nodes) {
     // ── 1. Hardcoded secrets scan ──────────────────────────────────────
-    const secretFindings = findSecretsInValue(
-      node.parameters,
-      `nodes["${node.name}"].parameters`
-    );
+    const secretFindings = findSecretsInValue(node.parameters, `nodes["${node.name}"].parameters`);
 
     for (const finding of secretFindings) {
       issues.push({

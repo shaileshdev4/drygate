@@ -1,10 +1,7 @@
 import { N8nWorkflow, Issue } from "@/types";
 import { WorkflowGraph, hasCycle } from "../parser";
 
-export function runLoopChecks(
-  workflow: N8nWorkflow,
-  graph: WorkflowGraph
-): Issue[] {
+export function runLoopChecks(workflow: N8nWorkflow, graph: WorkflowGraph): Issue[] {
   const issues: Issue[] = [];
 
   // ── Unbounded loop detection ────────────────────────────────────────
@@ -76,8 +73,7 @@ export function runPerformanceChecks(workflow: N8nWorkflow): Issue[] {
       const opts = node.parameters?.options as Record<string, unknown> | undefined;
       const hasTimeout =
         (opts && opts.timeout !== undefined && opts.timeout !== "") ||
-        (node.parameters as Record<string, unknown> | undefined)?.timeout !==
-          undefined;
+        (node.parameters as Record<string, unknown> | undefined)?.timeout !== undefined;
 
       if (!hasTimeout) {
         issues.push({
@@ -107,7 +103,7 @@ export function runPerformanceChecks(workflow: N8nWorkflow): Issue[] {
           severity: "low",
           title: `Wait "${node.name}" resumes on webhook/form (long-lived execution)`,
           detail:
-            "Executions can remain open until an external callback arrives — a common source of 'zombie' runs under load.",
+            "Executions can remain open until an external callback arrives - a common source of 'zombie' runs under load.",
           remediationHint:
             "Ensure global execution timeouts and monitoring are set; prefer bounded patterns where possible.",
         });

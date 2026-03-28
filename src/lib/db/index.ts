@@ -5,17 +5,18 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 function makePrisma() {
   const client = new PrismaClient({
     log: [
-      { level: "error",   emit: "stdout" },
-      { level: "warn",    emit: "stdout" },
-      { level: "info",    emit: "stdout" },
-      { level: "query",   emit: "stdout" },
+      { level: "error", emit: "stdout" },
+      { level: "warn", emit: "stdout" },
+      { level: "info", emit: "stdout" },
+      { level: "query", emit: "stdout" },
     ],
   });
 
   // Log the moment Prisma first connects
-  client.$connect()
+  client
+    .$connect()
     .then(() =>
-      console.log(JSON.stringify({ level: "info", message: "[prisma] connected to database" }))
+      console.log(JSON.stringify({ level: "info", message: "[prisma] connected to database" })),
     )
     .catch((err: unknown) =>
       console.error(
@@ -26,8 +27,8 @@ function makePrisma() {
           DATABASE_URL: process.env.DATABASE_URL
             ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ":***@")
             : "MISSING",
-        })
-      )
+        }),
+      ),
     );
 
   return client;

@@ -14,39 +14,63 @@ interface PipelineStage {
 }
 
 const STAGES: PipelineStage[] = [
-  { id: "parsing",     label: "Parsing",          sublabel: "Validates JSON shape",         color: "var(--sky)"    },
-  { id: "static",      label: "Static analysis",  sublabel: "Graph & security checks",      color: "var(--amber)"  },
-  { id: "sandbox",     label: "Sandbox run",       sublabel: "Live n8n execution",           color: "var(--violet)" },
-  { id: "remediation", label: "Remediation",       sublabel: "Generating fix plan",          color: "var(--jade)"   },
+  { id: "parsing", label: "Parsing", sublabel: "Validates JSON shape", color: "var(--sky)" },
+  {
+    id: "static",
+    label: "Static analysis",
+    sublabel: "Graph & security checks",
+    color: "var(--amber)",
+  },
+  { id: "sandbox", label: "Sandbox run", sublabel: "Live n8n execution", color: "var(--violet)" },
+  {
+    id: "remediation",
+    label: "Remediation",
+    sublabel: "Generating fix plan",
+    color: "var(--jade)",
+  },
 ];
 
 const STAGE_ETA: Record<string, string> = {
-  parsing:     "~2s",
-  static:      "~5s",
-  sandbox:     "~30s",
+  parsing: "~2s",
+  static: "~5s",
+  sandbox: "~30s",
   remediation: "~5s",
 };
 
 const STAGE_ORDER: Stage[] = ["parsing", "static", "sandbox", "remediation", "done"];
 
-const DEMO_WORKFLOW = JSON.stringify({
-  name: "Demo: E-commerce Order Sync",
-  nodes: [
-    { id: "n1", name: "Webhook Trigger", type: "n8n-nodes-base.webhook", position: [100, 200] },
-    { id: "n2", name: "Validate Order",  type: "n8n-nodes-base.if",      position: [300, 200] },
-    { id: "n3", name: "HTTP Request",    type: "n8n-nodes-base.httpRequest", position: [500, 200],
-      parameters: { url: "https://api.example.com/orders", authentication: "genericCredentialType" } },
-    { id: "n4", name: "Send Slack",      type: "n8n-nodes-base.slack",   position: [700, 200] },
-  ],
-  connections: {
-    "Webhook Trigger": { main: [[{ node: "Validate Order", type: "main", index: 0 }]] },
-    "Validate Order":  { main: [[{ node: "HTTP Request",   type: "main", index: 0 }]] },
-    "HTTP Request":    { main: [[{ node: "Send Slack",     type: "main", index: 0 }]] },
+const DEMO_WORKFLOW = JSON.stringify(
+  {
+    name: "Demo: E-commerce Order Sync",
+    nodes: [
+      { id: "n1", name: "Webhook Trigger", type: "n8n-nodes-base.webhook", position: [100, 200] },
+      { id: "n2", name: "Validate Order", type: "n8n-nodes-base.if", position: [300, 200] },
+      {
+        id: "n3",
+        name: "HTTP Request",
+        type: "n8n-nodes-base.httpRequest",
+        position: [500, 200],
+        parameters: {
+          url: "https://api.example.com/orders",
+          authentication: "genericCredentialType",
+        },
+      },
+      { id: "n4", name: "Send Slack", type: "n8n-nodes-base.slack", position: [700, 200] },
+    ],
+    connections: {
+      "Webhook Trigger": { main: [[{ node: "Validate Order", type: "main", index: 0 }]] },
+      "Validate Order": { main: [[{ node: "HTTP Request", type: "main", index: 0 }]] },
+      "HTTP Request": { main: [[{ node: "Send Slack", type: "main", index: 0 }]] },
+    },
   },
-}, null, 2);
+  null,
+  2,
+);
 
 /* ── Helpers ───────────────────────────────────────────────── */
-function stageIndex(s: Stage): number { return STAGE_ORDER.indexOf(s); }
+function stageIndex(s: Stage): number {
+  return STAGE_ORDER.indexOf(s);
+}
 
 function stageDot(current: Stage, target: Stage): "done" | "active" | "idle" {
   const ci = stageIndex(current);
@@ -63,19 +87,19 @@ export default function VerifyPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [input, setInput]       = useState("");
+  const [input, setInput] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [stage, setStage]       = useState<Stage>("idle");
-  const [logs, setLogs]         = useState<string[]>([]);
-  const [error, setError]       = useState<string | null>(null);
+  const [stage, setStage] = useState<Stage>("idle");
+  const [logs, setLogs] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
-  const [shareToken, setShareToken]         = useState<string | null>(null);
+  const [shareToken, setShareToken] = useState<string | null>(null);
   const [showSandboxLog, setShowSandboxLog] = useState(false);
 
-  const fileRef  = useRef<HTMLInputElement>(null);
-  const logRef   = useRef<HTMLDivElement>(null);
-  const esRef    = useRef<EventSource | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const logRef = useRef<HTMLDivElement>(null);
+  const esRef = useRef<EventSource | null>(null);
 
   /* Demo prefill */
   useEffect(() => {
@@ -113,20 +137,30 @@ export default function VerifyPageClient() {
     reader.readAsText(file);
   }, []);
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    },
+    [handleFile],
+  );
 
   /* ── Submit ────────────────────────────────────────────── */
   const handleSubmit = useCallback(async () => {
-    if (!input.trim()) { setError("Paste or upload a workflow JSON first."); return; }
+    if (!input.trim()) {
+      setError("Paste or upload a workflow JSON first.");
+      return;
+    }
 
     let parsed: unknown;
-    try { parsed = JSON.parse(input); }
-    catch { setError("Invalid JSON — check for syntax errors."); return; }
+    try {
+      parsed = JSON.parse(input);
+    } catch {
+      setError("Invalid JSON - check for syntax errors.");
+      return;
+    }
 
     setError(null);
     setLogs([]);
@@ -233,10 +267,7 @@ export default function VerifyPageClient() {
      RENDER
      ───────────────────────────────────────────────────────── */
   return (
-    <main
-      className="grid-bg"
-      style={{ minHeight: "100vh", padding: "36px 0 80px" }}
-    >
+    <main className="grid-bg" style={{ minHeight: "100vh", padding: "36px 0 80px" }}>
       <div
         style={{
           maxWidth: 1100,
@@ -249,12 +280,10 @@ export default function VerifyPageClient() {
         }}
         className="verify-layout"
       >
-
         {/* ══════════════════════════════════════════════════
-            LEFT — Input panel
+            LEFT - Input panel
             ══════════════════════════════════════════════════ */}
         <div style={{ animation: "fadeSlideIn 0.5s both" }}>
-
           {/* Header */}
           <div style={{ marginBottom: 28 }}>
             <div
@@ -281,14 +310,24 @@ export default function VerifyPageClient() {
             >
               Paste your n8n workflow JSON
             </h1>
-            <p style={{ marginTop: 8, fontSize: 14, color: "var(--text-2)", letterSpacing: "-0.01em" }}>
+            <p
+              style={{
+                marginTop: 8,
+                fontSize: 14,
+                color: "var(--text-2)",
+                letterSpacing: "-0.01em",
+              }}
+            >
               Export from n8n → Download → paste here, or drag a .json file.
             </p>
           </div>
 
           {/* Drop zone / textarea */}
           <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
             onClick={(e) => {
@@ -301,14 +340,15 @@ export default function VerifyPageClient() {
               position: "relative",
               borderRadius: 16,
               border: `1.5px dashed ${
-                dragging ? "var(--violet)" :
-                error    ? "var(--rose)" :
-                inputValid ? "var(--border-plus)" :
-                "var(--border-mid)"
+                dragging
+                  ? "var(--violet)"
+                  : error
+                    ? "var(--rose)"
+                    : inputValid
+                      ? "var(--border-plus)"
+                      : "var(--border-mid)"
               }`,
-              background: dragging
-                ? "var(--violet-dim)"
-                : "var(--surface)",
+              background: dragging ? "var(--violet-dim)" : "var(--surface)",
               transition: "border-color 0.2s, background 0.2s",
               overflow: "hidden",
               cursor: input ? "default" : "pointer",
@@ -329,15 +369,36 @@ export default function VerifyPageClient() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <rect x="2" y="1" width="8" height="12" rx="1.5" stroke="var(--violet)" strokeWidth="1.2"/>
-                    <path d="M5 5h4M5 7.5h3" stroke="var(--violet)" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
+                    <rect
+                      x="2"
+                      y="1"
+                      width="8"
+                      height="12"
+                      rx="1.5"
+                      stroke="var(--violet)"
+                      strokeWidth="1.2"
+                    />
+                    <path
+                      d="M5 5h4M5 7.5h3"
+                      stroke="var(--violet)"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      opacity="0.6"
+                    />
                   </svg>
-                  <span style={{ fontFamily: "var(--font-data)", fontSize: 12, color: "var(--text-2)" }}>
+                  <span
+                    style={{ fontFamily: "var(--font-data)", fontSize: 12, color: "var(--text-2)" }}
+                  >
                     {fileName}
                   </span>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setInput(""); setFileName(null); setError(null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setInput("");
+                    setFileName(null);
+                    setError(null);
+                  }}
                   style={{
                     background: "none",
                     border: "none",
@@ -386,12 +447,31 @@ export default function VerifyPageClient() {
                   }}
                 >
                   <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                    <path d="M11 14V4M7 8l4-4 4 4" stroke="var(--violet)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M4 16v1a1 1 0 001 1h12a1 1 0 001-1v-1" stroke="var(--violet)" strokeWidth="1.8" strokeLinecap="round" opacity="0.5"/>
+                    <path
+                      d="M11 14V4M7 8l4-4 4 4"
+                      stroke="var(--violet)"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M4 16v1a1 1 0 001 1h12a1 1 0 001-1v-1"
+                      stroke="var(--violet)"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      opacity="0.5"
+                    />
                   </svg>
                 </div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-2)", letterSpacing: "-0.01em" }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: "var(--text-2)",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
                     Drop .json file here
                   </div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
@@ -403,7 +483,11 @@ export default function VerifyPageClient() {
 
             <textarea
               value={input}
-              onChange={(e) => { setInput(e.target.value); setError(null); if (!fileName) setFileName(null); }}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setError(null);
+                if (!fileName) setFileName(null);
+              }}
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onPaste={(e) => e.stopPropagation()}
@@ -436,7 +520,10 @@ export default function VerifyPageClient() {
             type="file"
             accept=".json"
             style={{ display: "none" }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+            }}
           />
 
           {/* Error message */}
@@ -477,7 +564,7 @@ export default function VerifyPageClient() {
               style={{
                 fontSize: 14,
                 padding: "12px 28px",
-                opacity: (!inputValid || isRunning) ? 0.45 : 1,
+                opacity: !inputValid || isRunning ? 0.45 : 1,
               }}
             >
               {isRunning ? (
@@ -498,7 +585,13 @@ export default function VerifyPageClient() {
               ) : (
                 <>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path
+                      d="M3 7h8M7 3l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   Run verification
                 </>
@@ -516,7 +609,11 @@ export default function VerifyPageClient() {
 
             {!input && (
               <button
-                onClick={() => { setInput(DEMO_WORKFLOW); setFileName("demo-ecommerce-order-sync.json"); setError(null); }}
+                onClick={() => {
+                  setInput(DEMO_WORKFLOW);
+                  setFileName("demo-ecommerce-order-sync.json");
+                  setError(null);
+                }}
                 className="btn-ghost"
                 style={{ fontSize: 13 }}
               >
@@ -527,7 +624,7 @@ export default function VerifyPageClient() {
         </div>
 
         {/* ══════════════════════════════════════════════════
-            RIGHT — Pipeline status panel
+            RIGHT - Pipeline status panel
             ══════════════════════════════════════════════════ */}
         <div
           style={{
@@ -537,12 +634,8 @@ export default function VerifyPageClient() {
             animation: "fadeSlideIn 0.55s 0.1s both",
           }}
         >
-
           {/* Pipeline card */}
-          <div
-            className="glass-plus"
-            style={{ borderRadius: 20, padding: 24 }}
-          >
+          <div className="glass-plus" style={{ borderRadius: 20, padding: 24 }}>
             <div
               style={{
                 fontFamily: "var(--font-data)",
@@ -569,13 +662,17 @@ export default function VerifyPageClient() {
                       padding: "11px 14px",
                       borderRadius: 11,
                       background:
-                        st === "active" ? `${s.color}10` :
-                        st === "done"   ? "rgba(255,255,255,0.025)" :
-                        "transparent",
+                        st === "active"
+                          ? `${s.color}10`
+                          : st === "done"
+                            ? "rgba(255,255,255,0.025)"
+                            : "transparent",
                       border: `1px solid ${
-                        st === "active" ? `${s.color}30` :
-                        st === "done"   ? "var(--border)" :
-                        "transparent"
+                        st === "active"
+                          ? `${s.color}30`
+                          : st === "done"
+                            ? "var(--border)"
+                            : "transparent"
                       }`,
                       transition: "all 0.3s ease",
                     }}
@@ -600,12 +697,17 @@ export default function VerifyPageClient() {
                           height: 8,
                           borderRadius: "50%",
                           background:
-                            st === "done"   ? "var(--jade)" :
-                            st === "active" ? s.color :
-                            "var(--surface-high)",
+                            st === "done"
+                              ? "var(--jade)"
+                              : st === "active"
+                                ? s.color
+                                : "var(--surface-high)",
                           boxShadow:
-                            st === "active" ? `0 0 10px ${s.color}` :
-                            st === "done"   ? "0 0 8px var(--jade-glow)" : "none",
+                            st === "active"
+                              ? `0 0 10px ${s.color}`
+                              : st === "done"
+                                ? "0 0 8px var(--jade-glow)"
+                                : "none",
                           transition: "background 0.3s, box-shadow 0.3s",
                           position: "relative",
                         }}
@@ -619,9 +721,11 @@ export default function VerifyPageClient() {
                           fontSize: 13,
                           fontWeight: st !== "idle" ? 600 : 400,
                           color:
-                            st === "done"   ? "var(--text)" :
-                            st === "active" ? "var(--text)" :
-                            "var(--text-muted)",
+                            st === "done"
+                              ? "var(--text)"
+                              : st === "active"
+                                ? "var(--text)"
+                                : "var(--text-muted)",
                           letterSpacing: "-0.01em",
                           lineHeight: 1.3,
                           transition: "color 0.3s",
@@ -635,21 +739,29 @@ export default function VerifyPageClient() {
                     </div>
 
                     {/* Right status */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-end",
+                        gap: 2,
+                        flexShrink: 0,
+                      }}
+                    >
                       <div
                         style={{
                           fontFamily: "var(--font-data)",
                           fontSize: 10,
                           letterSpacing: "0.04em",
                           color:
-                            st === "done"   ? "var(--jade)" :
-                            st === "active" ? s.color :
-                            "var(--text-faint)",
+                            st === "done"
+                              ? "var(--jade)"
+                              : st === "active"
+                                ? s.color
+                                : "var(--text-faint)",
                         }}
                       >
-                        {st === "done"   ? "✓" :
-                         st === "active" ? "…" :
-                         "—"}
+                        {st === "done" ? "✓" : st === "active" ? "…" : "-"}
                       </div>
                       {st === "active" && STAGE_ETA[s.id] && (
                         <div
@@ -669,7 +781,7 @@ export default function VerifyPageClient() {
               })}
             </div>
 
-            {/* Done state — dramatic completion + View Report button */}
+            {/* Done state - dramatic completion + View Report button */}
             {stage === "done" && shareToken && (
               <div
                 style={{
@@ -684,13 +796,15 @@ export default function VerifyPageClient() {
                 <div
                   style={{
                     padding: "14px 16px",
-                    background: "linear-gradient(135deg, rgba(46,207,150,0.15) 0%, rgba(46,207,150,0.06) 100%)",
+                    background:
+                      "linear-gradient(135deg, rgba(46,207,150,0.15) 0%, rgba(46,207,150,0.06) 100%)",
                     border: "1px solid rgba(46,207,150,0.35)",
                     borderRadius: 12,
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    boxShadow: "0 0 32px rgba(46,207,150,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    boxShadow:
+                      "0 0 32px rgba(46,207,150,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
                     position: "relative",
                     overflow: "hidden",
                   }}
@@ -704,7 +818,8 @@ export default function VerifyPageClient() {
                       width: 80,
                       height: 80,
                       borderRadius: "50%",
-                      background: "radial-gradient(circle, rgba(46,207,150,0.25) 0%, transparent 70%)",
+                      background:
+                        "radial-gradient(circle, rgba(46,207,150,0.25) 0%, transparent 70%)",
                       pointerEvents: "none",
                     }}
                   />
@@ -722,25 +837,50 @@ export default function VerifyPageClient() {
                     }}
                   >
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                      <path d="M2.5 6.5L5.5 9.5L10.5 3.5" stroke="var(--jade)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path
+                        d="M2.5 6.5L5.5 9.5L10.5 3.5"
+                        stroke="var(--jade)"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jade-light)", letterSpacing: "-0.01em" }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "var(--jade-light)",
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
                       Verification complete
                     </div>
                     <div style={{ fontSize: 11, color: "var(--jade)", opacity: 0.7, marginTop: 1 }}>
-                      Report ready — click below to view
+                      Report ready - click below to view
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => router.push(`/report/${encodeURIComponent(shareToken)}`)}
                   className="btn-primary"
-                  style={{ width: "100%", justifyContent: "center", fontSize: 14, padding: "13px 20px", fontWeight: 700 }}
+                  style={{
+                    width: "100%",
+                    justifyContent: "center",
+                    fontSize: 14,
+                    padding: "13px 20px",
+                    fontWeight: 700,
+                  }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path
+                      d="M2 7h10M8 3l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   View Report
                 </button>
@@ -760,17 +900,14 @@ export default function VerifyPageClient() {
                   animation: "fadeSlideIn 0.4s both",
                 }}
               >
-                Pipeline failed — check error above.
+                Pipeline failed - check error above.
               </div>
             )}
           </div>
 
-          {/* Optional technical log — hidden by default; not needed for normal use */}
+          {/* Optional technical log - hidden by default; not needed for normal use */}
           {(stage !== "idle" || logs.length > 0) && (
-            <div
-              className="glass-plus"
-              style={{ borderRadius: 20, overflow: "hidden" }}
-            >
+            <div className="glass-plus" style={{ borderRadius: 20, overflow: "hidden" }}>
               <button
                 type="button"
                 onClick={() => setShowSandboxLog((o) => !o)}
@@ -816,8 +953,17 @@ export default function VerifyPageClient() {
                     )}
                     Technical details
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, lineHeight: 1.4 }}>
-                    Optional — raw messages from the verification sandbox. Use <code style={{ fontSize: 10 }}>?debug=1</code> on this page to expand automatically.
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--text-faint)",
+                      marginTop: 4,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Optional - raw messages from the verification sandbox. Use{" "}
+                    <code style={{ fontSize: 10 }}>?debug=1</code> on this page to expand
+                    automatically.
                   </div>
                 </div>
                 <div
@@ -831,7 +977,7 @@ export default function VerifyPageClient() {
                     color: "var(--text-faint)",
                   }}
                 >
-                  {logs.length > 0 ? `${logs.length} lines` : "—"}
+                  {logs.length > 0 ? `${logs.length} lines` : "-"}
                   <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
                     {showSandboxLog ? "▾" : "▸"}
                   </span>
@@ -874,7 +1020,9 @@ export default function VerifyPageClient() {
                           animation: "fadeSlideIn 0.18s both",
                         }}
                       >
-                        <span style={{ color: "var(--violet)", opacity: 0.4, marginRight: 8 }}>›</span>
+                        <span style={{ color: "var(--violet)", opacity: 0.4, marginRight: 8 }}>
+                          ›
+                        </span>
                         {line}
                       </div>
                     ))
@@ -896,7 +1044,7 @@ export default function VerifyPageClient() {
             <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6 }}>
               <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                 <span style={{ color: "var(--violet)", flexShrink: 0 }}>·</span>
-                <span>Score is heuristic — not a formal proof of safety.</span>
+                <span>Score is heuristic - not a formal proof of safety.</span>
               </div>
               <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
                 <span style={{ color: "var(--violet)", flexShrink: 0 }}>·</span>

@@ -48,12 +48,37 @@ function relativeDate(isoString: string): string {
 
 function StatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    runtime_done:   { label: "Completed",    color: "var(--jade-light)",  bg: "var(--jade-dim)",   border: "rgba(46,207,150,0.3)"  },
-    static_done:    { label: "Static only",  color: "var(--amber)",       bg: "var(--amber-dim)",  border: "rgba(245,185,66,0.3)"  },
-    sandbox_running:{ label: "Running",      color: "var(--sky)",         bg: "var(--sky-dim)",    border: "rgba(66,176,245,0.3)"  },
-    failed:         { label: "Failed",       color: "var(--rose-light)",  bg: "var(--rose-dim)",   border: "rgba(240,67,110,0.3)"  },
+    runtime_done: {
+      label: "Completed",
+      color: "var(--jade-light)",
+      bg: "var(--jade-dim)",
+      border: "rgba(46,207,150,0.3)",
+    },
+    static_done: {
+      label: "Static only",
+      color: "var(--amber)",
+      bg: "var(--amber-dim)",
+      border: "rgba(245,185,66,0.3)",
+    },
+    sandbox_running: {
+      label: "Running",
+      color: "var(--sky)",
+      bg: "var(--sky-dim)",
+      border: "rgba(66,176,245,0.3)",
+    },
+    failed: {
+      label: "Failed",
+      color: "var(--rose-light)",
+      bg: "var(--rose-dim)",
+      border: "rgba(240,67,110,0.3)",
+    },
   };
-  const s = map[status] ?? { label: status.replaceAll("_", " "), color: "var(--text-muted)", bg: "rgba(255,255,255,0.04)", border: "var(--border)" };
+  const s = map[status] ?? {
+    label: status.replaceAll("_", " "),
+    color: "var(--text-muted)",
+    bg: "rgba(255,255,255,0.04)",
+    border: "var(--border)",
+  };
   return (
     <span
       style={{
@@ -90,15 +115,14 @@ function parseHistoryPayload(d: unknown): VerificationRow[] {
   const rows = Array.isArray(d) ? d : Array.isArray(obj?.records) ? obj.records : [];
   return rows.map((row: any) => ({
     ...row,
-    createdAt:
-      row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+    createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
   }));
 }
 
 export default function DashboardPage() {
-  const [records, setRecords]     = useState<VerificationRow[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [filter, setFilter]       = useState<StatusFilter>("all");
+  const [records, setRecords] = useState<VerificationRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<StatusFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
 
@@ -116,7 +140,8 @@ export default function DashboardPage() {
   }, []);
 
   const deleteOne = async (id: string) => {
-    if (!window.confirm("Delete this verification from history? The share link will stop working.")) return;
+    if (!window.confirm("Delete this verification from history? The share link will stop working."))
+      return;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: "DELETE" });
@@ -135,7 +160,7 @@ export default function DashboardPage() {
     if (records.length === 0) return;
     if (
       !window.confirm(
-        `Delete all ${records.length} verifications? Every share link will stop working. This cannot be undone.`
+        `Delete all ${records.length} verifications? Every share link will stop working. This cannot be undone.`,
       )
     )
       return;
@@ -172,7 +197,7 @@ export default function DashboardPage() {
   }
 
   const completedCount = records.filter((r) => r.status === "runtime_done").length;
-  const failedCount    = records.filter((r) => r.status === "failed").length;
+  const failedCount = records.filter((r) => r.status === "failed").length;
 
   return (
     <main className="min-h-screen grid-bg relative">
@@ -185,7 +210,6 @@ export default function DashboardPage() {
       />
 
       <div className="relative z-[1] mx-auto max-w-5xl px-5 sm:px-8 py-12 sm:py-16">
-
         {/* ── Header ───────────────────────────────────── */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-10">
           <div>
@@ -226,9 +250,18 @@ export default function DashboardPage() {
                 {deletingAll ? "Deleting…" : "Delete all"}
               </button>
             )}
-            <Link href="/verify" className="btn-primary" style={{ padding: "10px 22px", fontSize: 13 }}>
+            <Link
+              href="/verify"
+              className="btn-primary"
+              style={{ padding: "10px 22px", fontSize: 13 }}
+            >
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                <path
+                  d="M7 1v12M1 7h12"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
               </svg>
               New verification
             </Link>
@@ -247,9 +280,9 @@ export default function DashboardPage() {
           >
             {(
               [
-                { key: "all",          label: `All  (${records.length})` },
+                { key: "all", label: `All  (${records.length})` },
                 { key: "runtime_done", label: `Completed  (${completedCount})` },
-                { key: "failed",       label: `Failed  (${failedCount})` },
+                { key: "failed", label: `Failed  (${failedCount})` },
               ] as { key: StatusFilter; label: string }[]
             ).map(({ key, label }) => (
               <button
@@ -282,7 +315,11 @@ export default function DashboardPage() {
               <div
                 key={i}
                 className="rounded-2xl"
-                style={{ height: 88, background: "var(--surface)", border: "1px solid var(--border)" }}
+                style={{
+                  height: 88,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
               />
             ))}
           </div>
@@ -296,10 +333,17 @@ export default function DashboardPage() {
               style={{ background: "var(--violet-dim)", border: "1px solid rgba(138,99,255,0.2)" }}
             >
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <path d="M11 4v14M4 11h14" stroke="var(--violet)" strokeWidth="1.8" strokeLinecap="round"/>
+                <path
+                  d="M11 4v14M4 11h14"
+                  stroke="var(--violet)"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
               </svg>
             </div>
-            <div className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Nothing yet</div>
+            <div className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>
+              Nothing yet
+            </div>
             <div className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
               Run your first verification to see results here.
             </div>
@@ -318,7 +362,13 @@ export default function DashboardPage() {
                 {/* Date group header */}
                 <div
                   className="mb-3 flex items-center gap-3"
-                  style={{ fontFamily: "var(--font-data)", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}
+                  style={{
+                    fontFamily: "var(--font-data)",
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
                 >
                   {dateLabel}
                   <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
@@ -335,7 +385,9 @@ export default function DashboardPage() {
                         style={{
                           background: "var(--surface-mid)",
                           border: "1px solid var(--border)",
-                          borderLeft: isFailed ? "3px solid var(--rose)" : "3px solid var(--border)",
+                          borderLeft: isFailed
+                            ? "3px solid var(--rose)"
+                            : "3px solid var(--border)",
                         }}
                       >
                         <div className="flex items-center gap-4 px-5 py-4">
@@ -353,7 +405,7 @@ export default function DashboardPage() {
                               className="font-bold tabular-nums leading-none"
                               style={{ fontSize: sc !== null ? 28 : 16, color: scoreColor(sc) }}
                             >
-                              {sc !== null ? sc : "—"}
+                              {sc !== null ? sc : "-"}
                             </div>
                             {sc !== null && (
                               <div
@@ -473,8 +525,19 @@ export default function DashboardPage() {
                                     }}
                                   />
                                 ) : (
-                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                                    <path d="M3.5 4h7M5.5 4V3a1 1 0 011-1h1a1 1 0 011 1v1M5.5 11V6M8.5 11V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                                  <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 14 14"
+                                    fill="none"
+                                    aria-hidden
+                                  >
+                                    <path
+                                      d="M3.5 4h7M5.5 4V3a1 1 0 011-1h1a1 1 0 011 1v1M5.5 11V6M8.5 11V6"
+                                      stroke="currentColor"
+                                      strokeWidth="1.3"
+                                      strokeLinecap="round"
+                                    />
                                   </svg>
                                 )}
                               </button>

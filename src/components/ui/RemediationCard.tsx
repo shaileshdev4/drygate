@@ -47,7 +47,7 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
             <span
               className={cn(
                 "text-[10px] font-mono font-semibold px-2 py-0.5 rounded border",
-                effortColors[item.estimatedEffort] ?? "text-muted border-border"
+                effortColors[item.estimatedEffort] ?? "text-muted border-border",
               )}
             >
               {effortLabel(item.estimatedEffort)}
@@ -83,7 +83,7 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
         <svg
           className={cn(
             "w-4 h-4 flex-shrink-0 mt-1 transition-transform duration-200",
-            expanded ? "rotate-180" : "rotate-0"
+            expanded ? "rotate-180" : "rotate-0",
           )}
           style={{ color: "var(--text-muted)" }}
           fill="none"
@@ -97,10 +97,7 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
 
       {/* Expanded steps */}
       {expanded && (
-        <div
-          className="px-5 pb-5 pt-0 border-t"
-          style={{ borderColor: "var(--border)" }}
-        >
+        <div className="px-5 pb-5 pt-0 border-t" style={{ borderColor: "var(--border)" }}>
           <ol className="space-y-3 mt-4">
             {item.steps.map((step, i) => (
               <li key={i} className="flex gap-3 text-sm">
@@ -114,10 +111,7 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
                 >
                   {i + 1}
                 </span>
-                <span
-                  className="leading-relaxed pt-0.5"
-                  style={{ color: "var(--text-2)" }}
-                >
+                <span className="leading-relaxed pt-0.5" style={{ color: "var(--text-2)" }}>
                   {step}
                 </span>
               </li>

@@ -1,11 +1,7 @@
 import { IssueSeverity } from "@/types";
 import { severityBgClass } from "@/lib/utils";
 
-export function SeverityBadge({
-  severity,
-}: {
-  severity: IssueSeverity;
-}) {
+export function SeverityBadge({ severity }: { severity: IssueSeverity }) {
   const cls = severityBgClass(severity);
   return (
     <span
@@ -33,4 +29,3 @@ export function SeverityBadge({
     </span>
   );
 }
-

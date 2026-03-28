@@ -28,8 +28,7 @@ module.exports = {
           "linear-gradient(rgba(26,32,53,0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(26,32,53,0.4) 1px, transparent 1px)",
         "green-glow":
           "radial-gradient(ellipse at center, rgba(5,226,122,0.15) 0%, transparent 70%)",
-        "red-glow":
-          "radial-gradient(ellipse at center, rgba(255,61,61,0.15) 0%, transparent 70%)",
+        "red-glow": "radial-gradient(ellipse at center, rgba(255,61,61,0.15) 0%, transparent 70%)",
         "amber-glow":
           "radial-gradient(ellipse at center, rgba(255,176,32,0.15) 0%, transparent 70%)",
       },

@@ -35,10 +35,7 @@ export async function POST(req: NextRequest) {
   }
 
   const rawWorkflow =
-    (body as any)?.workflow ??
-    (body as any)?.workflowJson ??
-    (body as any)?.data ??
-    body;
+    (body as any)?.workflow ?? (body as any)?.workflowJson ?? (body as any)?.data ?? body;
 
   const shareToken = nanoid();
 
@@ -49,9 +46,7 @@ export async function POST(req: NextRequest) {
       shareToken,
       userId: effectiveUserId,
       workflowName: (body as any)?.name ? String((body as any).name) : "Uploaded Workflow",
-      nodeCount: Array.isArray((rawWorkflow as any)?.nodes)
-        ? (rawWorkflow as any).nodes.length
-        : 0,
+      nodeCount: Array.isArray((rawWorkflow as any)?.nodes) ? (rawWorkflow as any).nodes.length : 0,
       triggerType: null,
       status: "pending",
       readinessScore: null,
@@ -145,7 +140,10 @@ export async function POST(req: NextRequest) {
         data: { status: "sandbox_running" },
       });
 
-      log.info("[pipeline] starting sandbox", { verificationId, sandboxUrl: process.env.SANDBOX_N8N_URL || "(none — ephemeral)" });
+      log.info("[pipeline] starting sandbox", {
+        verificationId,
+        sandboxUrl: process.env.SANDBOX_N8N_URL || "(none - ephemeral)",
+      });
       try {
         const { runtimeReport: runtime } = await runSandbox(
           verificationId,
@@ -159,14 +157,13 @@ export async function POST(req: NextRequest) {
               timestamp: nowIso(),
               payload: { message: msg },
             });
-          }
+          },
         );
         log.info("[pipeline] sandbox complete", { verificationId });
         runtimeReport = { ...runtime, executionLog: [...executionLog] };
       } catch (sandboxErr) {
-        const message =
-          sandboxErr instanceof Error ? sandboxErr.message : String(sandboxErr);
-        log.warn("[pipeline] sandbox failed — degraded mode", { verificationId, error: message });
+        const message = sandboxErr instanceof Error ? sandboxErr.message : String(sandboxErr);
+        log.warn("[pipeline] sandbox failed - degraded mode", { verificationId, error: message });
         sandboxFailed = true;
         sandboxFailureMessage = message;
         const degradedLine = `Sandbox degraded mode: ${message}`;
@@ -189,9 +186,7 @@ export async function POST(req: NextRequest) {
         };
       }
 
-      const egressIssues = buildEgressPolicyIssues(
-        runtimeReport.egressInterceptions ?? []
-      );
+      const egressIssues = buildEgressPolicyIssues(runtimeReport.egressInterceptions ?? []);
       const fuzzIssues = runtimeReport.guardrailIssues ?? [];
       const mergedIssues = [...report.issues, ...egressIssues, ...fuzzIssues];
       staticReport = {
@@ -319,4 +314,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ id: verificationId, shareToken }, { status: 200 });
 }
-

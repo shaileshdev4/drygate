@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const record = await prisma.verification.findUnique({
     where: { id: params.id },
   });
@@ -27,6 +24,6 @@ export async function GET(
       runtimeReport: record.runtimeReportJson ? JSON.parse(record.runtimeReportJson) : null,
       remediationPlan: record.remediationJson ? JSON.parse(record.remediationJson) : null,
     },
-    { status: 200 }
+    { status: 200 },
   );
 }

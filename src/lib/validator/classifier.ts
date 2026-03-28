@@ -1,6 +1,6 @@
 import { N8nNode, NodeClass, NodeCoverage } from "@/types";
 
-// Nodes we can run as-is — no external side effects, no credentials
+// Nodes we can run as-is - no external side effects, no credentials
 const FULLY_SIMULATABLE: string[] = [
   "n8n-nodes-base.set",
   "n8n-nodes-base.if",
@@ -34,7 +34,7 @@ const MOCK_INTERCEPTED: string[] = [
   "n8n-nodes-base.graphql",
 ];
 
-// Known destructive nodes — blocked regardless of credentials
+// Known destructive nodes - blocked regardless of credentials
 const DESTRUCTIVE_NODE_PATTERNS: string[] = [
   "n8n-nodes-base.sendEmail",
   "n8n-nodes-base.emailSend",
@@ -48,7 +48,7 @@ const DESTRUCTIVE_NODE_PATTERNS: string[] = [
 ];
 
 // Nodes that need credentials but aren't inherently destructive
-// We block these to be safe — they MIGHT be destructive (e.g. DB writes)
+// We block these to be safe - they MIGHT be destructive (e.g. DB writes)
 const CREDENTIAL_DEPENDENT_PATTERNS: string[] = [
   "n8n-nodes-base.postgres",
   "n8n-nodes-base.mysql",
@@ -70,7 +70,7 @@ const CREDENTIAL_DEPENDENT_PATTERNS: string[] = [
   "n8n-nodes-base.telegram",
 ];
 
-// Structural-only — we can parse them but can't run them
+// Structural-only - we can parse them but can't run them
 const STRUCTURAL_ONLY_PATTERNS: string[] = [
   "n8n-nodes-base.executeWorkflow",
   "n8n-nodes-base.executeWorkflowTrigger",
@@ -79,7 +79,7 @@ const STRUCTURAL_ONLY_PATTERNS: string[] = [
 export function classifyNode(node: N8nNode): NodeCoverage {
   const type = node.type.toLowerCase();
 
-  // Destructive — always block first, before checking credentials
+  // Destructive - always block first, before checking credentials
   if (DESTRUCTIVE_NODE_PATTERNS.some((p) => type.includes(p.toLowerCase()))) {
     return {
       nodeId: node.id,
@@ -103,14 +103,10 @@ export function classifyNode(node: N8nNode): NodeCoverage {
     };
   }
 
-  // If node has credentials configured — block unless it's in mock_intercepted
-  const hasCreds =
-    node.credentials && Object.keys(node.credentials).length > 0;
+  // If node has credentials configured - block unless it's in mock_intercepted
+  const hasCreds = node.credentials && Object.keys(node.credentials).length > 0;
 
-  if (
-    hasCreds &&
-    !MOCK_INTERCEPTED.some((p) => type.includes(p.toLowerCase()))
-  ) {
+  if (hasCreds && !MOCK_INTERCEPTED.some((p) => type.includes(p.toLowerCase()))) {
     return {
       nodeId: node.id,
       nodeName: node.name,
@@ -122,9 +118,7 @@ export function classifyNode(node: N8nNode): NodeCoverage {
   }
 
   // Credential-dependent by type even without creds configured
-  if (
-    CREDENTIAL_DEPENDENT_PATTERNS.some((p) => type.includes(p.toLowerCase()))
-  ) {
+  if (CREDENTIAL_DEPENDENT_PATTERNS.some((p) => type.includes(p.toLowerCase()))) {
     return {
       nodeId: node.id,
       nodeName: node.name,
@@ -155,7 +149,7 @@ export function classifyNode(node: N8nNode): NodeCoverage {
     };
   }
 
-  // Unknown — treat as structural only (community/custom nodes)
+  // Unknown - treat as structural only (community/custom nodes)
   return {
     nodeId: node.id,
     nodeName: node.name,
@@ -175,8 +169,5 @@ export function getSimulatableClasses(): NodeClass[] {
 }
 
 export function isRunnable(coverage: NodeCoverage): boolean {
-  return (
-    coverage.class === "fully_simulatable" ||
-    coverage.class === "mock_intercepted"
-  );
+  return coverage.class === "fully_simulatable" || coverage.class === "mock_intercepted";
 }
