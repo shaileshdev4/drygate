@@ -2,32 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
-
-// Loaded only when Clerk is configured — prevents the @clerk/nextjs package
-// from initialising (and throwing) on the server when no publishable key is set.
-const ClerkAuthButtons = dynamic(
-  () => import("./ClerkAuthButtons").then((m) => ({ default: m.ClerkAuthButtons })),
-  { ssr: false }
-);
 
 const NAV_LINKS = [
-  { href: "/verify", label: "Verify" },
+  { href: "/verify",    label: "Verify"  },
   { href: "/dashboard", label: "History" },
 ];
 
-function clerkConfigured(): boolean {
-  const k = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  return (
-    typeof k === "string" &&
-    k.trim() !== "" &&
-    !k.includes("your_key")
-  );
-}
-
 export function Header() {
   const pathname = usePathname();
-  const useClerk = clerkConfigured();
 
   return (
     <header
@@ -36,7 +18,6 @@ export function Header() {
         top: 0,
         zIndex: 50,
         width: "100%",
-        /* Frosted surface — no border-bottom cliché, use a diffuse line instead */
         background: "rgba(11,10,16,0.72)",
         backdropFilter: "blur(20px) saturate(140%)",
         WebkitBackdropFilter: "blur(20px) saturate(140%)",
@@ -55,7 +36,7 @@ export function Header() {
           gap: 24,
         }}
       >
-        {/* ── Wordmark ─────────────────────────────── */}
+        {/* Wordmark */}
         <Link
           href="/"
           style={{
@@ -66,7 +47,6 @@ export function Header() {
             flexShrink: 0,
           }}
         >
-          {/* Mark */}
           <span
             style={{
               width: 28,
@@ -80,15 +60,12 @@ export function Header() {
               flexShrink: 0,
             }}
           >
-            {/* Gate icon — two stacked lines like a logic gate */}
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
               <rect x="1" y="4" width="7" height="1.5" rx="0.75" fill="white" opacity="0.95" />
               <rect x="1" y="7.5" width="5" height="1.5" rx="0.75" fill="white" opacity="0.6" />
               <circle cx="11" cy="6.5" r="1.5" fill="white" opacity="0.9" />
             </svg>
           </span>
-
-          {/* Logotype */}
           <span
             style={{
               fontFamily: "var(--font-ui, 'DM Sans', sans-serif)",
@@ -102,14 +79,8 @@ export function Header() {
           </span>
         </Link>
 
-        {/* ── Center nav ───────────────────────────── */}
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
+        {/* Center nav */}
+        <nav style={{ display: "flex", alignItems: "center", gap: 2 }}>
           {NAV_LINKS.map(({ href, label }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             return (
@@ -164,42 +135,15 @@ export function Header() {
           })}
         </nav>
 
-        {/* ── Right cluster ─────────────────────────── */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          {/* Badge */}
-          <span
-            style={{
-              fontFamily: "var(--font-data, 'DM Mono', monospace)",
-              fontSize: 10,
-              fontWeight: 400,
-              letterSpacing: "0.06em",
-              color: "var(--text-muted, #524e66)",
-              background: "var(--surface-plus, #1f1c29)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: 4,
-              padding: "2px 8px",
-              display: "none",
-            }}
-            className="badge-version"
-          >
-            BETA
-          </span>
-
-          {!useClerk ? (
-            <Link
-              href="/verify"
-              className="btn-primary"
-              style={{ padding: "8px 18px", fontSize: 13 }}
-            >
-              Get started
-            </Link>
-          ) : (
-            <ClerkAuthButtons />
-          )}
+        {/* Right — CTA */}
+        <div style={{ flexShrink: 0 }}>
+          <Link href="/verify" className="btn-primary" style={{ padding: "8px 18px", fontSize: 13 }}>
+            Get started
+          </Link>
         </div>
       </div>
 
-      {/* Violet accent line — ultra thin, glows at center */}
+      {/* Violet accent line */}
       <div
         style={{
           position: "absolute",
@@ -208,8 +152,7 @@ export function Header() {
           transform: "translateX(-50%)",
           width: "30%",
           height: 1,
-          background:
-            "linear-gradient(90deg, transparent, rgba(138,99,255,0.5) 50%, transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(138,99,255,0.5) 50%, transparent)",
           pointerEvents: "none",
         }}
       />

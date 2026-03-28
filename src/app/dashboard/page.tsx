@@ -21,39 +21,8 @@ function statusPill(status: string) {
 }
 
 export default async function DashboardPage() {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const clerkEnabled =
-    typeof publishableKey === "string" &&
-    publishableKey.trim() !== "" &&
-    !publishableKey.includes("your_key");
-
-  const { userId } = clerkEnabled
-    ? (await import("@clerk/nextjs/server")).auth()
-    : { userId: null as string | null };
-  const effectiveUserId = userId ?? (clerkEnabled ? null : "demo-user");
-
-  if (!effectiveUserId) {
-    return (
-      <main className="min-h-screen grid-bg relative overflow-hidden">
-        <div className="relative mx-auto max-w-3xl px-6 py-14">
-          <div className="glass-plus rounded-3xl border p-8">
-            <div className="text-xl font-semibold">Sign in required</div>
-            <div className="mt-2 text-sm text-muted leading-relaxed">
-              Create a Drygate account to view your verification history.
-            </div>
-            <div className="mt-6">
-              <Link href="/verify" className="btn-primary">
-                Start a new verification
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
   const records = await prisma.verification.findMany({
-    where: { userId: effectiveUserId },
+    where: { userId: "demo-user" },
     orderBy: { createdAt: "desc" },
     take: 50,
     select: {

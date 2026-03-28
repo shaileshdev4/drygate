@@ -23,25 +23,7 @@ function nowIso() {
 
 export async function POST(req: NextRequest) {
   log.info("[verify] POST received");
-
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const clerkEnabled =
-    typeof publishableKey === "string" &&
-    publishableKey.trim() !== "" &&
-    !publishableKey.includes("your_key");
-
-  log.info("[verify] auth check", { clerkEnabled });
-
-  const { userId } = clerkEnabled
-    ? (await import("@clerk/nextjs/server")).auth()
-    : { userId: null as string | null };
-  const effectiveUserId = userId ?? (clerkEnabled ? null : "demo-user");
-
-  if (!effectiveUserId) {
-    log.warn("[verify] unauthorized — no userId");
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  const effectiveUserId = "demo-user";
   log.info("[verify] userId resolved", { userId: effectiveUserId });
 
   let body: unknown;

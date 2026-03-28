@@ -13,18 +13,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  const clerkEnabled =
-    typeof publishableKey === "string" &&
-    publishableKey.trim() !== "" &&
-    !publishableKey.includes("your_key");
-
-  const htmlShell = (inner: React.ReactNode) => (
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,18 +22,8 @@ export default async function RootLayout({
       </head>
       <body>
         <Header />
-        {inner}
+        {children}
       </body>
     </html>
   );
-
-  if (clerkEnabled) {
-    // Only import @clerk/nextjs when keys are actually present — prevents the
-    // package from initialising (and throwing) when no publishable key is set.
-    const { ClerkProvider } = await import("@clerk/nextjs");
-    return htmlShell(<ClerkProvider>{children}</ClerkProvider>);
-  }
-
-  return htmlShell(children);
 }
-
