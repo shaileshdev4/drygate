@@ -422,11 +422,12 @@ function persistentHeadersWithOptionalApiKey(): Record<string, string> {
   return h;
 }
 
-/** Axios auth: public API often accepts only the API key; otherwise Basic. */
-function persistentRequestAuth():
-  | { username: string; password: string }
-  | undefined {
-  return SANDBOX_N8N_API_KEY ? undefined : persistentBasicAuth();
+/**
+ * Persistent mode auth is handled exclusively via the session cookie (or API key header).
+ * Sending Basic Auth simultaneously causes 401 on n8n v1.x which removed Basic Auth support.
+ */
+function persistentRequestAuth(): undefined {
+  return undefined;
 }
 
 function parseExecutionIdFromRunResponse(data: unknown): string | null {
@@ -702,41 +703,11 @@ async function executePersistentWorkflow(
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
     if (id) return id;
-    onLog(`[sandbox] REST run (legacy) OK but no execution id; trying public API...`);
-  } else {
-    onLog(
-      `[sandbox] REST run (legacy) ${restResponse.status}; trying public API...`
-    );
-  }
-
-  const publicEndpoints = [
-    `${baseUrl}/api/v1/workflows/${workflowId}/run`,
-    `${baseUrl}/api/v1/workflows/${workflowId}/execute`,
-  ];
-
-  for (const endpoint of publicEndpoints) {
-    const execResponse = await axios.post(
-      endpoint,
-      {},
-      {
-        headers: persistentHeadersWithOptionalApiKey(),
-        auth: persistentRequestAuth(),
-        timeout: 120_000,
-        validateStatus: () => true,
-      }
-    );
-    if (execResponse.status === 404 || execResponse.status === 405) {
-      continue;
-    }
-    if (execResponse.status < 400) {
-      const executionId = parseExecutionIdFromRunResponse(execResponse.data);
-      if (executionId) return executionId;
-    }
   }
 
   const restErr = JSON.stringify(restResponse.data).slice(0, 280);
   throw new Error(
-    `Persistent execute failed after REST (modern + legacy) and public API fallbacks. Last REST: ${restResponse.status} ${restErr}`
+    `Persistent execute failed after REST modern + legacy body. Last status: ${restResponse.status} ${restErr}`
   );
 }
 
@@ -1015,77 +986,18 @@ async function importWorkflow(
 }
 
 async function executeWorkflow(
-  baseUrl: string,
-  workflowId: string,
-  workflow: N8nWorkflow,
-  onLog: (m: string) => void
+  _baseUrl: string,
+  _workflowId: string,
+  _workflow: N8nWorkflow,
+  _onLog: (m: string) => void
 ): Promise<string> {
-  // Find trigger type to determine how to trigger
-  const triggerNode = workflow.nodes.find((n) =>
-    n.type.toLowerCase().includes("trigger") ||
-    n.type === "n8n-nodes-base.start"
+  // n8n's public API (/api/v1/workflows/:id/run|execute) does not exist as a stable
+  // endpoint across n8n versions. Ephemeral mode uses the pinned n8n image (0.236.2)
+  // which requires the REST internal endpoint, not the public API.
+  throw new Error(
+    "Ephemeral sandbox execution is not supported in this build. " +
+    "Set SANDBOX_N8N_URL to use persistent sandbox mode."
   );
-
-  // Use the manual execution endpoint which works for all workflow types in sandbox
-  const payload = {
-    runData: {},
-    startNodes: triggerNode ? [triggerNode.name] : undefined,
-    destinationNode: undefined,
-  };
-
-  const runEndpoints = [
-    `${baseUrl}/api/v1/workflows/${workflowId}/run`,
-    `${baseUrl}/api/v1/workflows/${workflowId}/execute`,
-  ];
-
-  for (const endpoint of runEndpoints) {
-    try {
-      onLog(`[sandbox] execute request: POST ${endpoint.replace(baseUrl, "")}`);
-      const response = await axios.post(endpoint, payload, {
-        auth: { username: SANDBOX_USER, password: SANDBOX_PASS },
-        timeout: 10_000,
-      });
-      onLog(
-        `[sandbox] execute response: status=200 endpoint=${endpoint.replace(baseUrl, "")}`
-      );
-      const body = response.data as Record<string, unknown>;
-      const nested = (body.data as Record<string, unknown> | undefined) ?? {};
-      const executionIdRaw =
-        body.executionId ??
-        body.id ??
-        nested.executionId ??
-        nested.id;
-      const executionId =
-        typeof executionIdRaw === "string" || typeof executionIdRaw === "number"
-          ? String(executionIdRaw)
-          : null;
-
-      if (!executionId) {
-        throw new Error(
-          `Execute workflow returned 200 but no execution id. endpoint=${endpoint.replace(baseUrl, "")} body=${JSON.stringify(response.data).slice(0, 400)}`
-        );
-      }
-
-      return executionId;
-    } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const status = err.response?.status;
-        const body = JSON.stringify(err.response?.data ?? "");
-        onLog(
-          `[sandbox] execute response: status=${status ?? "unknown"} endpoint=${endpoint.replace(baseUrl, "")} body=${body.slice(0, 300)}`
-        );
-        if (status === 404 || status === 405) {
-          continue;
-        }
-        throw new Error(
-          `Execute workflow failed at ${endpoint} with status ${status ?? "unknown"}: ${body.slice(0, 300)}`
-        );
-      }
-      throw err;
-    }
-  }
-
-  throw new Error("n8n execution endpoint not found (tried /run and /execute).");
 }
 
 async function pollExecution(

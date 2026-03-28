@@ -2,6 +2,27 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSseHistory, sseStreams } from "@/lib/sse/streams";
 
+function sseSandboxLogChunksFromRuntimeJson(runtimeReportJson: string | null): string {
+  if (!runtimeReportJson) return "";
+  try {
+    const rt = JSON.parse(runtimeReportJson) as { executionLog?: unknown };
+    if (!Array.isArray(rt.executionLog)) return "";
+    const ts = () => new Date().toISOString();
+    return rt.executionLog
+      .filter((l): l is string => typeof l === "string" && l.length > 0)
+      .map((message) =>
+        `data: ${JSON.stringify({
+          type: "sandbox_log",
+          timestamp: ts(),
+          payload: { message },
+        })}\n\n`
+      )
+      .join("");
+  } catch {
+    return "";
+  }
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
@@ -14,8 +35,20 @@ export async function GET(
     return new Response("Verification not found", { status: 404 });
   }
 
-  // If already complete, send the final state and close
+  const sseHeaders = {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive" as const,
+  };
+
+  // If already complete: replay in-memory SSE history when present (same process),
+  // otherwise rebuild sandbox_log events from persisted executionLog so the UI is not empty.
   if (record.status === "runtime_done" || record.status === "failed") {
+    const history = getSseHistory(id);
+    if (history.length > 0) {
+      return new Response(history.join(""), { headers: sseHeaders });
+    }
+
     const finalData = JSON.stringify({
       type: record.status === "failed" ? "pipeline_error" : "verification_complete",
       timestamp: new Date().toISOString(),
@@ -36,13 +69,11 @@ export async function GET(
       },
     });
 
-    return new Response(`data: ${finalData}\n\ndata: {"type":"stream_end"}\n\n`, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
+    const logReplay = sseSandboxLogChunksFromRuntimeJson(record.runtimeReportJson);
+    const body =
+      logReplay + `data: ${finalData}\n\ndata: {"type":"stream_end"}\n\n`;
+
+    return new Response(body, { headers: sseHeaders });
   }
 
   // Otherwise, open a live stream

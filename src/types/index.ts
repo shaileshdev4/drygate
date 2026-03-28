@@ -148,6 +148,8 @@ export interface N8nWorkflow {
     sandboxError?: string;
     /** Issues from input fuzzing or other sandbox-side guardrails (merged into scoring). */
     guardrailIssues?: Issue[];
+    /** Sandbox controller log lines (replayed over SSE when the client connects after completion). */
+    executionLog?: string[];
   }
   
   // ─────────────────────────────────────────────

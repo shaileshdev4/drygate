@@ -7,10 +7,6 @@ out
 .env.local
 .env.*.local
 
-# Local databases
-*.db
-prisma/*.db
-
 # TypeScript / tooling
 tsconfig.tsbuildinfo
 

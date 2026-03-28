@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     let scoreband: string | null = null;
     let sandboxFailed = false;
     let sandboxFailureMessage: string | null = null;
+    const executionLog: string[] = [];
 
     try {
       broadcast(verificationId, {
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
           workflow,
           report.coverageClassification,
           (msg) => {
+            executionLog.push(msg);
             broadcast(verificationId, {
               type: "sandbox_log",
               timestamp: nowIso(),
@@ -162,18 +164,18 @@ export async function POST(req: NextRequest) {
             });
           }
         );
-        runtimeReport = runtime;
+        runtimeReport = { ...runtime, executionLog: [...executionLog] };
       } catch (sandboxErr) {
         const message =
           sandboxErr instanceof Error ? sandboxErr.message : String(sandboxErr);
         sandboxFailed = true;
         sandboxFailureMessage = message;
+        const degradedLine = `Sandbox degraded mode: ${message}`;
+        executionLog.push(degradedLine);
         broadcast(verificationId, {
           type: "sandbox_log",
           timestamp: nowIso(),
-          payload: {
-            message: `Sandbox degraded mode: ${message}`,
-          },
+          payload: { message: degradedLine },
         });
         runtimeReport = {
           executionId: "unavailable",
@@ -184,6 +186,7 @@ export async function POST(req: NextRequest) {
           simulationCoverage: 0,
           guardrailIssues: [],
           sandboxError: message,
+          executionLog: [...executionLog],
         };
       }
 

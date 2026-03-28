@@ -140,5 +140,14 @@ export function runStructureChecks(
     }
   }
 
-  return issues;
+  // Deduplicate by issueCode + nodeId — a node that is fully disconnected will
+  // sometimes also appear in the unreachable check; keep the first occurrence only.
+  const seen = new Set<string>();
+  const deduped = issues.filter((issue) => {
+    const key = `${issue.issueCode}:${issue.nodeId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return deduped;
 }
