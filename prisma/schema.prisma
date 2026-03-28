@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Verification {
+  id                 String   @id @default(uuid())
+  shareToken         String   @unique
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  userId             String?
+  workflowName       String
+  nodeCount          Int
+  triggerType        String?
+  status             String   @default("pending")
+  readinessScore     Int?
+  scoreband          String?
+  simulationCoverage Float?
+  staticReportJson   String?
+  runtimeReportJson  String?
+  remediationJson    String?
+  pipelineError      String?
+}
+
+
