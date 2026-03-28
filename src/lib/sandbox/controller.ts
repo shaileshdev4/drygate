@@ -666,47 +666,39 @@ async function executePersistentWorkflow(
     validateStatus: () => true,
   };
 
-  // n8n 2.x+: POST /run loads the workflow from the DB. The body must be a ManualRunPayload
-  // with destinationNode.nodeName — NOT workflowData alone (that leaves destinationNode
-  // undefined and causes "Cannot read properties of undefined (reading 'nodeName')").
-  const modernRunBody = {
-    destinationNode: {
-      nodeName: triggerName,
-      mode: "inclusive" as const,
-    },
+  // ── Attempt 1: n8n 0.x (0.236.2) ─────────────────────────────────────────
+  // Endpoint: POST /rest/workflows/run  (no ID in path — workflow sent in body)
+  const v0Body = {
+    workflowData: { ...workflowData, id: workflowId },
+    startNodes: [triggerName],
+    destinationNode: "",
   };
 
   let restResponse = await axios.post(
-    `${baseUrl}/rest/workflows/${workflowId}/run`,
-    modernRunBody,
+    `${baseUrl}/rest/workflows/run`,
+    v0Body,
     runConfig
   );
+
+  onLog(`[sandbox] v0 run attempt: ${restResponse.status}`);
 
   if (restResponse.status < 400) {
     if (responseIndicatesWebhookWait(restResponse.data)) {
       throw new Error(
-        "n8n returned waitingForWebhook — the start node is not runnable as a manual execution. Check trigger coercion (Manual Trigger)."
+        "n8n returned waitingForWebhook — start node is not a manual trigger."
       );
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
     if (id) return id;
-    onLog(
-      `[sandbox] REST run (modern) OK but no execution id; trying legacy body...`
-    );
+    onLog("[sandbox] v0 run OK but no execution id; trying v1 endpoint...");
   } else {
-    onLog(
-      `[sandbox] REST run (modern) ${restResponse.status}; trying n8n 1.x-style payload...`
-    );
+    onLog(`[sandbox] v0 run ${restResponse.status}; trying v1 endpoint...`);
   }
 
-  // n8n 1.72.x: body must include workflowData with id matching URL; include startNodes
-  // so the webhook gate does not dereference a missing destinationNode.
-  const legacyWorkflowData = {
-    ...workflowData,
-    id: workflowId,
-  };
-  const legacyRunBody = {
-    workflowData: legacyWorkflowData,
+  // ── Attempt 2: n8n 1.x ────────────────────────────────────────────────────
+  // Endpoint: POST /rest/workflows/{id}/run  with workflowData in body
+  const v1Body = {
+    workflowData: { ...workflowData, id: workflowId },
     runData: {},
     startNodes: [{ name: triggerName }],
     destinationNode: "",
@@ -714,14 +706,43 @@ async function executePersistentWorkflow(
 
   restResponse = await axios.post(
     `${baseUrl}/rest/workflows/${workflowId}/run`,
-    legacyRunBody,
+    v1Body,
     runConfig
   );
+
+  onLog(`[sandbox] v1 run attempt: ${restResponse.status}`);
 
   if (restResponse.status < 400) {
     if (responseIndicatesWebhookWait(restResponse.data)) {
       throw new Error(
-        "n8n returned waitingForWebhook (legacy run) — cannot complete sandbox execution."
+        "n8n returned waitingForWebhook (v1 run) — cannot complete sandbox execution."
+      );
+    }
+    const id = parseExecutionIdFromRunResponse(restResponse.data);
+    if (id) return id;
+    onLog("[sandbox] v1 run OK but no execution id; trying v2 endpoint...");
+  } else {
+    onLog(`[sandbox] v1 run ${restResponse.status}; trying v2 endpoint...`);
+  }
+
+  // ── Attempt 3: n8n 2.x+ ───────────────────────────────────────────────────
+  // Endpoint: POST /rest/workflows/{id}/run  with destinationNode only
+  const v2Body = {
+    destinationNode: { nodeName: triggerName, mode: "inclusive" as const },
+  };
+
+  restResponse = await axios.post(
+    `${baseUrl}/rest/workflows/${workflowId}/run`,
+    v2Body,
+    runConfig
+  );
+
+  onLog(`[sandbox] v2 run attempt: ${restResponse.status}`);
+
+  if (restResponse.status < 400) {
+    if (responseIndicatesWebhookWait(restResponse.data)) {
+      throw new Error(
+        "n8n returned waitingForWebhook (v2 run) — cannot complete sandbox execution."
       );
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
@@ -730,7 +751,7 @@ async function executePersistentWorkflow(
 
   const restErr = JSON.stringify(restResponse.data).slice(0, 280);
   throw new Error(
-    `Persistent execute failed after REST modern + legacy body. Last status: ${restResponse.status} ${restErr}`
+    `Persistent execute failed after v0/v1/v2 attempts. Last status: ${restResponse.status} ${restErr}`
   );
 }
 
