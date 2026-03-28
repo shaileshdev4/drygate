@@ -2,7 +2,7 @@ node_modules
 .next
 out
 
-# Env and secrets
+# Env and secrets (keep *.example files committed as templates)
 .env
 .env.local
 .env.*.local
