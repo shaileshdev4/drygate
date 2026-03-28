@@ -23,3 +23,12 @@ export async function GET() {
 
   return NextResponse.json({ records });
 }
+
+/** Remove all verifications for the demo user (same scope as GET). */
+export async function DELETE() {
+  const result = await prisma.verification.deleteMany({
+    where: { userId: "demo-user" },
+  });
+
+  return NextResponse.json({ ok: true, deleted: result.count });
+}

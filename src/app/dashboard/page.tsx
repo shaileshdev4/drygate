@@ -85,22 +85,72 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+function parseHistoryPayload(d: unknown): VerificationRow[] {
+  const obj = d as { records?: unknown };
+  const rows = Array.isArray(d) ? d : Array.isArray(obj?.records) ? obj.records : [];
+  return rows.map((row: any) => ({
+    ...row,
+    createdAt:
+      row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
+  }));
+}
+
 export default function DashboardPage() {
   const [records, setRecords]     = useState<VerificationRow[]>([]);
   const [loading, setLoading]     = useState(true);
   const [filter, setFilter]       = useState<StatusFilter>("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
 
-  useEffect(() => {
+  const loadRecords = () => {
+    setLoading(true);
     fetch("/api/history")
       .then((r) => r.json())
-      .then((d) => {
-        const rows = Array.isArray(d) ? d : Array.isArray(d?.records) ? d.records : [];
-        // Normalize createdAt to ISO string
-        setRecords(rows.map((row: any) => ({ ...row, createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt) })));
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      .then((d) => setRecords(parseHistoryPayload(d)))
+      .catch(() => setRecords([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadRecords();
   }, []);
+
+  const deleteOne = async (id: string) => {
+    if (!window.confirm("Delete this verification from history? The share link will stop working.")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/history/${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        window.alert((err as { error?: string })?.error ?? `Delete failed (${res.status})`);
+        return;
+      }
+      setRecords((prev) => prev.filter((x) => x.id !== id));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const deleteAll = async () => {
+    if (records.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete all ${records.length} verifications? Every share link will stop working. This cannot be undone.`
+      )
+    )
+      return;
+    setDeletingAll(true);
+    try {
+      const res = await fetch("/api/history", { method: "DELETE" });
+      if (!res.ok) {
+        window.alert("Delete all failed.");
+        return;
+      }
+      setRecords([]);
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   const filtered = records.filter((r) => {
     if (filter === "all") return true;
@@ -137,7 +187,7 @@ export default function DashboardPage() {
       <div className="relative z-[1] mx-auto max-w-5xl px-5 sm:px-8 py-12 sm:py-16">
 
         {/* ── Header ───────────────────────────────────── */}
-        <div className="flex items-start justify-between gap-6 mb-10">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-10">
           <div>
             <p
               style={{
@@ -158,12 +208,31 @@ export default function DashboardPage() {
               Every workflow you've verified, with score, status, and shareable report.
             </p>
           </div>
-          <Link href="/verify" className="btn-primary shrink-0" style={{ padding: "10px 22px", fontSize: 13 }}>
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
-            </svg>
-            New verification
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {records.length > 0 && (
+              <button
+                type="button"
+                onClick={deleteAll}
+                disabled={deletingAll || loading}
+                className="btn-ghost"
+                style={{
+                  padding: "10px 16px",
+                  fontSize: 13,
+                  color: "var(--rose-light)",
+                  borderColor: "rgba(240,67,110,0.25)",
+                  opacity: deletingAll ? 0.5 : 1,
+                }}
+              >
+                {deletingAll ? "Deleting…" : "Delete all"}
+              </button>
+            )}
+            <Link href="/verify" className="btn-primary" style={{ padding: "10px 22px", fontSize: 13 }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+              </svg>
+              New verification
+            </Link>
+          </div>
         </div>
 
         {/* ── Filter tabs ─────────────────────────────── */}
@@ -347,7 +416,7 @@ export default function DashboardPage() {
                             </div>
                           </div>
 
-                          {/* Time + open button */}
+                          {/* Time + actions */}
                           <div className="flex flex-col items-end gap-2 shrink-0">
                             <span
                               style={{
@@ -361,15 +430,55 @@ export default function DashboardPage() {
                                 minute: "2-digit",
                               })}
                             </span>
-                            {r.shareToken && (
-                              <Link
-                                href={`/report/${r.shareToken}`}
-                                className="btn-ghost"
-                                style={{ fontSize: 12, padding: "5px 14px" }}
+                            <div className="flex flex-wrap items-center justify-end gap-1.5">
+                              {r.shareToken && (
+                                <Link
+                                  href={`/report/${r.shareToken}`}
+                                  className="btn-ghost"
+                                  style={{ fontSize: 12, padding: "5px 14px" }}
+                                >
+                                  Open report
+                                </Link>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => deleteOne(r.id)}
+                                disabled={deletingId === r.id}
+                                title="Delete from history"
+                                aria-label="Delete verification"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 8,
+                                  border: "1px solid rgba(240,67,110,0.25)",
+                                  background: "var(--rose-dim)",
+                                  color: "var(--rose-light)",
+                                  cursor: deletingId === r.id ? "wait" : "pointer",
+                                  opacity: deletingId === r.id ? 0.5 : 1,
+                                  flexShrink: 0,
+                                }}
                               >
-                                Open report
-                              </Link>
-                            )}
+                                {deletingId === r.id ? (
+                                  <span
+                                    style={{
+                                      width: 12,
+                                      height: 12,
+                                      border: "2px solid rgba(255,255,255,0.25)",
+                                      borderTopColor: "currentColor",
+                                      borderRadius: "50%",
+                                      animation: "spin 0.7s linear infinite",
+                                    }}
+                                  />
+                                ) : (
+                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                                    <path d="M3.5 4h7M5.5 4V3a1 1 0 011-1h1a1 1 0 011 1v1M5.5 11V6M8.5 11V6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
