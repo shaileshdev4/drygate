@@ -2,16 +2,12 @@ version: "3.8"
 
 services:
   n8n:
-    image: n8nio/n8n:0.236.2
+    image: n8nio/n8n:latest
     container_name: drygate-n8n-sandbox
     restart: unless-stopped
     ports:
       - "5678:5678"
     environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=drygate
-      - N8N_BASIC_AUTH_PASSWORD=drygate-sandbox-pw
-      - N8N_USER_MANAGEMENT_DISABLED=true
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
@@ -20,6 +16,7 @@ services:
       - N8N_TEMPLATES_ENABLED=false
       - N8N_HIRING_BANNER_ENABLED=false
       - N8N_LOG_LEVEL=warn
+      - N8N_SECURE_COOKIE=false
       - HTTP_PROXY=http://mock-gateway:4000
       - HTTPS_PROXY=http://mock-gateway:4000
       - NO_PROXY=localhost,127.0.0.1
