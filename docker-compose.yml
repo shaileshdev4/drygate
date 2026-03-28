@@ -1,0 +1,57 @@
+version: "3.8"
+
+# Persistent sandbox for Drygate workflow verification.
+# Run once: docker compose up -d
+# The n8n instance stays alive between verifications — no spin-up delay.
+#
+# Use latest so bundled nodes (LangChain, newer integrations) match templates
+# exported from current n8n. The controller falls back to POST /api/v1/workflows/:id/execute
+# when needed; set SANDBOX_N8N_API_KEY in .env for strict 2.x public API auth.
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: drygate-n8n-sandbox
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Browser / API: HTTP Basic Auth only (username + password below).
+      # Do not confuse with n8n email login — with USER_MANAGEMENT_DISABLED you usually
+      # only see this Basic prompt, not an email/password screen (unless an old volume had owners).
+      # Basic-auth — these match SANDBOX_USER / SANDBOX_PASS in controller.ts
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=drygate
+      - N8N_BASIC_AUTH_PASSWORD=drygate-sandbox-pw
+      # Disable user-management so no "owner setup" wizard blocks the API
+      - N8N_USER_MANAGEMENT_DISABLED=true
+      # Save everything for analysis
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
+      # Quiet
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_TEMPLATES_ENABLED=false
+      - N8N_HIRING_BANNER_ENABLED=false
+      - N8N_LOG_LEVEL=warn
+    volumes:
+      - n8n_sandbox_data:/home/node/.n8n
+
+  mock-gateway:
+    build:
+      context: ./mock-gateway
+    container_name: drygate-mock-gateway
+    restart: unless-stopped
+    environment:
+      - GATEWAY_PORT=4000
+      - LOG_FILE=/tmp/egress-log.json
+    networks:
+      - sandbox-net
+
+networks:
+  sandbox-net:
+    driver: bridge
+
+volumes:
+  n8n_sandbox_data:
