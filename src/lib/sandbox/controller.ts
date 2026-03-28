@@ -551,20 +551,22 @@ async function ensurePersistentSession(baseUrl: string, onLog: (m: string) => vo
 }
 
 async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => void) {
-  const deadline = Date.now() + 120_000;
+  // n8n can take 60-90s on cold start (DB migrations). Give it 3 minutes total.
+  const deadline = Date.now() + 180_000;
   let attempt = 0;
 
   while (Date.now() < deadline) {
     attempt += 1;
     try {
       const auth = persistentBasicAuth();
+      // Use 10s per request — n8n may be slow to respond during DB migrations.
       const health = await axios.get(`${baseUrl}/healthz`, {
-        timeout: 3_000,
+        timeout: 10_000,
         validateStatus: () => true,
         auth,
       });
       const settings = await axios.get(`${baseUrl}/rest/settings`, {
-        timeout: 3_000,
+        timeout: 10_000,
         validateStatus: () => true,
         auth,
       });
@@ -573,11 +575,11 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
       );
 
       if (health.status !== 200 || settings.status !== 200) {
-        await sleep(2_000);
+        await sleep(3_000);
         continue;
       }
 
-      // n8n process is up and editor REST is reachable, now establish session (or Basic-only).
+      // n8n process is up and editor REST is reachable, now establish session.
       await ensurePersistentSession(baseUrl, onLog);
       return;
     } catch (err) {
@@ -585,9 +587,9 @@ async function waitForPersistentN8nApi(baseUrl: string, onLog: (m: string) => vo
         `[sandbox] persistent probe #${attempt}: error ${(err as Error).message}`
       );
     }
-    await sleep(2000);
+    await sleep(3_000);
   }
-  throw new Error("Persistent sandbox did not become ready in time (120s).");
+  throw new Error("Persistent sandbox did not become ready in time (180s).");
 }
 
 async function createPersistentWorkflow(
