@@ -436,11 +436,17 @@ function persistentHeadersWithOptionalApiKey(): Record<string, string> {
 }
 
 /**
- * Persistent mode auth is handled exclusively via the session cookie (or API key header).
- * Sending Basic Auth simultaneously causes 401 on n8n v1.x which removed Basic Auth support.
+ * n8n 0.236.2 (pre-v1.0) still supports Basic Auth.
+ * Use session cookie when established; fall back to Basic Auth otherwise.
+ * (On n8n v1.x+ Basic Auth was removed — session cookie only.)
  */
-function persistentRequestAuth(): undefined {
-  return undefined;
+function persistentRequestAuth() {
+  if (persistentSessionCookie) {
+    // Cookie is set — don't send Basic Auth to avoid header conflicts on newer n8n.
+    return undefined;
+  }
+  // No session yet — use Basic Auth (supported on n8n 0.x).
+  return persistentBasicAuth();
 }
 
 function parseExecutionIdFromRunResponse(data: unknown): string | null {
@@ -535,13 +541,15 @@ async function ensurePersistentSession(baseUrl: string, onLog: (m: string) => vo
     const n8nAuthCookie = setCookieHeader?.find((c) => c.startsWith("n8n-auth="));
     if (n8nAuthCookie) {
       persistentSessionCookie = n8nAuthCookie.split(";")[0];
+      onLog("[sandbox] session cookie acquired — using cookie auth.");
       return;
     }
-    onLog(
-      "[sandbox] login OK but no n8n-auth cookie — continuing with Basic Auth only."
-    );
+    onLog("[sandbox] login OK but no n8n-auth cookie — falling back to Basic Auth.");
     return;
   }
+
+  // Login failed — Basic Auth fallback will be used for all subsequent calls.
+  onLog(`[sandbox] login failed (${login.status}) — will use Basic Auth fallback. Response: ${JSON.stringify(login.data).slice(0, 200)}`);
 
   // With N8N_USER_MANAGEMENT_DISABLED=true there is no user DB; /rest/login fails
   // even though REST accepts Basic Auth (same as browser: first dialog only).
