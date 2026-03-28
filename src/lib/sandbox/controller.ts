@@ -645,6 +645,36 @@ async function createPersistentWorkflow(
   };
 }
 
+/**
+ * Fetches the most recent execution ID for a workflow.
+ * Used when n8n 0.x returns execution data inline instead of an executionId.
+ */
+async function fetchLatestExecutionId(
+  baseUrl: string,
+  workflowId: string,
+  config: Parameters<typeof axios.get>[1]
+): Promise<string | null> {
+  try {
+    const resp = await axios.get(`${baseUrl}/rest/executions`, {
+      ...config,
+      params: { workflowId, limit: 1 },
+      timeout: 10_000,
+    });
+    if (resp.status >= 400) return null;
+    const body = resp.data as Record<string, unknown>;
+    const list =
+      (body.data as unknown[] | undefined) ??
+      (Array.isArray(body.results) ? (body.results as unknown[]) : null) ??
+      (Array.isArray(body) ? (body as unknown[]) : null);
+    if (!list || list.length === 0) return null;
+    const first = list[0] as Record<string, unknown>;
+    const id = first.id;
+    return typeof id === "string" || typeof id === "number" ? String(id) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function executePersistentWorkflow(
   baseUrl: string,
   workflowId: string,
@@ -690,7 +720,15 @@ async function executePersistentWorkflow(
     }
     const id = parseExecutionIdFromRunResponse(restResponse.data);
     if (id) return id;
-    onLog("[sandbox] v0 run OK but no execution id; trying v1 endpoint...");
+    // n8n 0.x returns execution data inline (no executionId in body).
+    // Fetch the most recent execution for this workflow instead of polling.
+    onLog("[sandbox] v0 run OK but no execution id — fetching latest execution from list...");
+    const latestId = await fetchLatestExecutionId(baseUrl, workflowId, runConfig);
+    if (latestId) {
+      onLog(`[sandbox] found latest execution id: ${latestId}`);
+      return latestId;
+    }
+    onLog("[sandbox] could not resolve execution id from list; trying v1 endpoint...");
   } else {
     onLog(`[sandbox] v0 run ${restResponse.status}; trying v1 endpoint...`);
   }
