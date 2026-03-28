@@ -1,6 +1,11 @@
 import { N8nWorkflow, Issue } from "@/types";
 import { WorkflowGraph, reachableFrom, hasCycle, isTriggerNode } from "../parser";
 
+/** n8n Sticky Notes are annotations only: no wires, no execution — not a defect. */
+function isStickyNoteNode(nodeType: string): boolean {
+  return nodeType.toLowerCase() === "n8n-nodes-base.stickynote";
+}
+
 export function runStructureChecks(
   workflow: N8nWorkflow,
   graph: WorkflowGraph
@@ -27,6 +32,7 @@ export function runStructureChecks(
   // Any node with no upstream AND no downstream connections (except triggers)
   for (const node of workflow.nodes) {
     if (isTriggerNode(node.type)) continue;
+    if (isStickyNoteNode(node.type)) continue;
     if (node.disabled) continue;
 
     const hasUpstream =
@@ -60,29 +66,36 @@ export function runStructureChecks(
 
     for (const node of workflow.nodes) {
       if (isTriggerNode(node.type)) continue;
+      if (isStickyNoteNode(node.type)) continue;
       if (node.disabled) continue;
-      if (!reachable.has(node.name)) {
-        // Only raise if not already flagged as disconnected
-        const hasUpstream =
-          (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
-        if (hasUpstream) {
-          // It has a parent but that parent isn't reachable from trigger either
-          // Avoid duplicate — the root of the unreachable chain will catch it
-        } else {
-          issues.push({
-            issueCode: "DISCONNECTED_NODE",
-            nodeId: node.id,
-            nodeName: node.name,
-            nodeType: node.type,
-            severity: "medium",
-            title: `Node "${node.name}" is unreachable from any trigger`,
-            detail:
-              "This node cannot be reached from any trigger node. It will never execute in production.",
-            remediationHint:
-              "Trace back the connection chain from this node and ensure it connects to an active trigger.",
-          });
-        }
+      if (reachable.has(node.name)) continue;
+
+      const hasUpstream =
+        (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
+      const hasDownstream = (graph.adjacency.get(node.name)?.size ?? 0) > 0;
+
+      // Fully disconnected (no in, no out) is already one DISCONNECTED_NODE in §2.
+      // Unreachable-from-trigger is implied; do not emit a second issue for the same node.
+      if (!hasUpstream && !hasDownstream) continue;
+
+      if (hasUpstream) {
+        // Subgraph not reachable from trigger but this node has a parent — same as before:
+        // do not duplicate many issues along the chain.
+        continue;
       }
+
+      issues.push({
+        issueCode: "DISCONNECTED_NODE",
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.type,
+        severity: "medium",
+        title: `Node "${node.name}" is unreachable from any trigger`,
+        detail:
+          "This node cannot be reached from any trigger node. It will never execute in production.",
+        remediationHint:
+          "Trace back the connection chain from this node and ensure it connects to an active trigger.",
+      });
     }
   }
 
@@ -105,6 +118,7 @@ export function runStructureChecks(
   // ── 5. Disabled nodes in the critical path ──────────────────────────
   for (const node of workflow.nodes) {
     if (!node.disabled) continue;
+    if (isStickyNoteNode(node.type)) continue;
 
     const hasUpstream =
       (graph.reverseAdjacency.get(node.name)?.size ?? 0) > 0;
