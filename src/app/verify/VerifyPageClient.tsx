@@ -64,6 +64,7 @@ export default function VerifyPageClient() {
   const [error, setError]       = useState<string | null>(null);
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [shareToken, setShareToken]         = useState<string | null>(null);
+  const [showSandboxLog, setShowSandboxLog] = useState(false);
 
   const fileRef  = useRef<HTMLInputElement>(null);
   const logRef   = useRef<HTMLDivElement>(null);
@@ -75,6 +76,11 @@ export default function VerifyPageClient() {
       setInput(DEMO_WORKFLOW);
       setFileName("demo-ecommerce-order-sync.json");
     }
+  }, [searchParams]);
+
+  /* Power users: /verify?debug=1 opens the technical log automatically */
+  useEffect(() => {
+    if (searchParams?.get("debug") === "1") setShowSandboxLog(true);
   }, [searchParams]);
 
   /* Auto-scroll logs */
@@ -278,7 +284,12 @@ export default function VerifyPageClient() {
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
-            onClick={() => !input && fileRef.current?.click()}
+            onClick={(e) => {
+              if (input) return;
+              const t = e.target as HTMLElement;
+              if (t.closest("textarea")) return;
+              fileRef.current?.click();
+            }}
             style={{
               position: "relative",
               borderRadius: 16,
@@ -386,10 +397,16 @@ export default function VerifyPageClient() {
             <textarea
               value={input}
               onChange={(e) => { setInput(e.target.value); setError(null); if (!fileName) setFileName(null); }}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPaste={(e) => e.stopPropagation()}
               placeholder={!input ? "\n\n\n\n\n\n" : ""}
               disabled={isRunning}
               spellCheck={false}
+              autoComplete="off"
               style={{
+                position: "relative",
+                zIndex: 2,
                 width: "100%",
                 minHeight: input ? 340 : 220,
                 padding: "16px",
@@ -690,100 +707,124 @@ export default function VerifyPageClient() {
             )}
           </div>
 
-          {/* Live log card */}
-          <div
-            className="glass-plus"
-            style={{ borderRadius: 20, overflow: "hidden" }}
-          >
+          {/* Optional technical log — hidden by default; not needed for normal use */}
+          {(stage !== "idle" || logs.length > 0) && (
             <div
-              style={{
-                padding: "14px 18px 10px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: "1px solid var(--border)",
-              }}
+              className="glass-plus"
+              style={{ borderRadius: 20, overflow: "hidden" }}
             >
-              <div
+              <button
+                type="button"
+                onClick={() => setShowSandboxLog((o) => !o)}
                 style={{
-                  fontFamily: "var(--font-data)",
-                  fontSize: 10,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-muted)",
+                  width: "100%",
+                  padding: "14px 18px",
                   display: "flex",
                   alignItems: "center",
-                  gap: 7,
+                  justifyContent: "space-between",
+                  gap: 12,
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: showSandboxLog ? "1px solid var(--border)" : "none",
+                  cursor: "pointer",
+                  textAlign: "left",
                 }}
               >
-                {isRunning && (
-                  <span
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div
                     style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: "var(--violet)",
-                      boxShadow: "0 0 8px var(--violet)",
-                      animation: "pulseGlow 1.2s ease-in-out infinite",
-                      display: "inline-block",
+                      fontFamily: "var(--font-data)",
+                      fontSize: 10,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 7,
                     }}
-                  />
-                )}
-                Sandbox log
-              </div>
-              <span
-                style={{
-                  fontFamily: "var(--font-data)",
-                  fontSize: 10,
-                  color: "var(--text-faint)",
-                }}
-              >
-                {logs.length} lines
-              </span>
-            </div>
-
-            <div
-              ref={logRef}
-              style={{
-                height: 220,
-                overflowY: "auto",
-                padding: "12px 16px",
-                background: "var(--bg)",
-              }}
-            >
-              {logs.length === 0 ? (
+                  >
+                    {isRunning && (
+                      <span
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          background: "var(--violet)",
+                          boxShadow: "0 0 8px var(--violet)",
+                          animation: "pulseGlow 1.2s ease-in-out infinite",
+                          display: "inline-block",
+                        }}
+                      />
+                    )}
+                    Technical details
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 4, lineHeight: 1.4 }}>
+                    Optional — raw messages from the verification sandbox. Use <code style={{ fontSize: 10 }}>?debug=1</code> on this page to expand automatically.
+                  </div>
+                </div>
                 <div
                   style={{
-                    height: "100%",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
+                    gap: 8,
+                    flexShrink: 0,
                     fontFamily: "var(--font-data)",
-                    fontSize: 12,
+                    fontSize: 10,
                     color: "var(--text-faint)",
                   }}
                 >
-                  {stage === "idle" ? "Awaiting run…" : "Connecting to sandbox…"}
+                  {logs.length > 0 ? `${logs.length} lines` : "—"}
+                  <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                    {showSandboxLog ? "▾" : "▸"}
+                  </span>
                 </div>
-              ) : (
-                logs.map((line, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      fontFamily: "var(--font-data)",
-                      fontSize: 11.5,
-                      lineHeight: 1.7,
-                      color: "var(--text-2)",
-                      animation: "fadeSlideIn 0.18s both",
-                    }}
-                  >
-                    <span style={{ color: "var(--violet)", opacity: 0.4, marginRight: 8 }}>›</span>
-                    {line}
-                  </div>
-                ))
+              </button>
+
+              {showSandboxLog && (
+                <div
+                  ref={logRef}
+                  style={{
+                    height: 220,
+                    overflowY: "auto",
+                    padding: "12px 16px",
+                    background: "var(--bg)",
+                  }}
+                >
+                  {logs.length === 0 ? (
+                    <div
+                      style={{
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontFamily: "var(--font-data)",
+                        fontSize: 12,
+                        color: "var(--text-faint)",
+                      }}
+                    >
+                      Connecting to sandbox…
+                    </div>
+                  ) : (
+                    logs.map((line, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          fontFamily: "var(--font-data)",
+                          fontSize: 11.5,
+                          lineHeight: 1.7,
+                          color: "var(--text-2)",
+                          animation: "fadeSlideIn 0.18s both",
+                        }}
+                      >
+                        <span style={{ color: "var(--violet)", opacity: 0.4, marginRight: 8 }}>›</span>
+                        {line}
+                      </div>
+                    ))
+                  )}
+                </div>
               )}
             </div>
-          </div>
+          )}
 
           {/* Info card */}
           <div
