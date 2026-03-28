@@ -19,16 +19,26 @@ export function ScoreGauge({
   const label = scoreBandLabel(scoreband);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="relative h-[132px] w-[132px]">
-        <div className="absolute inset-0 rounded-full bg-green-glow/0" />
-        <svg viewBox="0 0 120 120" className="h-full w-full">
-          <circle
-            cx={cx}
-            cy={cy}
-            r={r}
-            className="score-arc-track"
-          />
+    <div className="flex items-center justify-center">
+      {/* Circular frame + padding so round stroke caps are not clipped by a square box */}
+      <div
+        className="relative grid shrink-0 place-items-center overflow-visible rounded-full"
+        style={{
+          width: 152,
+          height: 152,
+          background: "transparent",
+          border: "1px solid var(--border-mid)",
+          boxSizing: "border-box",
+        }}
+      >
+        <svg
+          viewBox="0 0 120 120"
+          width={128}
+          height={128}
+          className="col-start-1 row-start-1 overflow-visible"
+          aria-hidden
+        >
+          <circle cx={cx} cy={cy} r={r} className="score-arc-track" />
           <circle
             cx={cx}
             cy={cy}
@@ -44,9 +54,9 @@ export function ScoreGauge({
           />
         </svg>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-3xl font-bold tracking-tight">{safeScore}</div>
-          <div className="text-[11px] text-muted">{label}</div>
+        <div className="pointer-events-none col-start-1 row-start-1 flex flex-col items-center justify-center text-center">
+          <div className="text-3xl font-bold tracking-tight tabular-nums">{safeScore}</div>
+          <div className="max-w-[100px] px-1 text-[11px] leading-tight text-muted">{label}</div>
         </div>
       </div>
     </div>
