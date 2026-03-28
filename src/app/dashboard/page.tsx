@@ -1,134 +1,386 @@
+"use client";
+
 import Link from "next/link";
-import { prisma } from "@/lib/db";
-import { formatDate, scoreBandColor, scoreBandLabel } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { scoreBandLabel } from "@/lib/utils";
 
-export const dynamic = "force-dynamic";
+type StatusFilter = "all" | "runtime_done" | "failed";
 
-function statusPill(status: string) {
-  const base = "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold";
-  switch (status) {
-    case "runtime_done":
-      return `${base} border-green/40 bg-green/10 text-green`;
-    case "static_done":
-      return `${base} border-amber/40 bg-amber/10 text-amber`;
-    case "sandbox_running":
-      return `${base} border-blue/40 bg-blue/10 text-blue`;
-    case "failed":
-      return `${base} border-red/40 bg-red/10 text-red`;
-    default:
-      return `${base} border-border-plus bg-surface-plus/40 text-muted`;
-  }
+interface VerificationRow {
+  id: string;
+  shareToken: string | null;
+  createdAt: string;
+  workflowName: string | null;
+  nodeCount: number | null;
+  status: string;
+  readinessScore: number | null;
+  scoreband: string | null;
+  simulationCoverage: number | null;
 }
 
-export default async function DashboardPage() {
-  const records = await prisma.verification.findMany({
-    where: { userId: "demo-user" },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      shareToken: true,
-      createdAt: true,
-      workflowName: true,
-      nodeCount: true,
-      status: true,
-      readinessScore: true,
-      scoreband: true,
-      simulationCoverage: true,
-    },
+function scoreColor(score: number | null): string {
+  if (score === null) return "var(--text-muted)";
+  if (score >= 85) return "var(--jade)";
+  if (score >= 65) return "var(--violet-light)";
+  if (score >= 40) return "var(--amber)";
+  return "var(--rose)";
+}
+
+function scoreBg(score: number | null): string {
+  if (score === null) return "rgba(255,255,255,0.04)";
+  if (score >= 85) return "var(--jade-dim)";
+  if (score >= 65) return "var(--violet-dim)";
+  if (score >= 40) return "var(--amber-dim)";
+  return "var(--rose-dim)";
+}
+
+function relativeDate(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  if (d.getTime() === today.getTime()) return "Today";
+  if (d.getTime() === yesterday.getTime()) return "Yesterday";
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { label: string; color: string; bg: string; border: string }> = {
+    runtime_done:   { label: "Completed",    color: "var(--jade-light)",  bg: "var(--jade-dim)",   border: "rgba(46,207,150,0.3)"  },
+    static_done:    { label: "Static only",  color: "var(--amber)",       bg: "var(--amber-dim)",  border: "rgba(245,185,66,0.3)"  },
+    sandbox_running:{ label: "Running",      color: "var(--sky)",         bg: "var(--sky-dim)",    border: "rgba(66,176,245,0.3)"  },
+    failed:         { label: "Failed",       color: "var(--rose-light)",  bg: "var(--rose-dim)",   border: "rgba(240,67,110,0.3)"  },
+  };
+  const s = map[status] ?? { label: status.replaceAll("_", " "), color: "var(--text-muted)", bg: "rgba(255,255,255,0.04)", border: "var(--border)" };
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 5,
+        padding: "3px 10px",
+        borderRadius: 20,
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.03em",
+        color: s.color,
+        background: s.bg,
+        border: `1px solid ${s.border}`,
+        fontFamily: "var(--font-data)",
+      }}
+    >
+      <span
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: s.color,
+          flexShrink: 0,
+        }}
+      />
+      {s.label}
+    </span>
+  );
+}
+
+export default function DashboardPage() {
+  const [records, setRecords]     = useState<VerificationRow[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState<StatusFilter>("all");
+
+  useEffect(() => {
+    fetch("/api/history")
+      .then((r) => r.json())
+      .then((d) => {
+        const rows = Array.isArray(d) ? d : Array.isArray(d?.records) ? d.records : [];
+        // Normalize createdAt to ISO string
+        setRecords(rows.map((row: any) => ({ ...row, createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt) })));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const filtered = records.filter((r) => {
+    if (filter === "all") return true;
+    if (filter === "runtime_done") return r.status === "runtime_done";
+    if (filter === "failed") return r.status === "failed";
+    return true;
   });
 
+  // Group by date label
+  const grouped: Array<{ dateLabel: string; rows: VerificationRow[] }> = [];
+  for (const row of filtered) {
+    const label = relativeDate(row.createdAt);
+    const last = grouped[grouped.length - 1];
+    if (last && last.dateLabel === label) {
+      last.rows.push(row);
+    } else {
+      grouped.push({ dateLabel: label, rows: [row] });
+    }
+  }
+
+  const completedCount = records.filter((r) => r.status === "runtime_done").length;
+  const failedCount    = records.filter((r) => r.status === "failed").length;
+
   return (
-    <main className="min-h-screen grid-bg relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-surface/20 to-bg" />
-      <div className="relative mx-auto max-w-6xl px-6 py-10">
-        <header className="flex items-start justify-between gap-6">
+    <main className="min-h-screen grid-bg relative">
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 40% at 50% -5%, rgba(138,99,255,0.08) 0%, transparent 55%)",
+        }}
+      />
+
+      <div className="relative z-[1] mx-auto max-w-5xl px-5 sm:px-8 py-12 sm:py-16">
+
+        {/* ── Header ───────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-6 mb-10">
           <div>
-            <div className="mono-tag inline-flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--green)" }} />
-              DASHBOARD
-            </div>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight">Your history</h1>
-            <p className="mt-2 text-muted leading-relaxed max-w-prose">
-              Past verifications and shareable report links.
+            <p
+              style={{
+                fontSize: 10,
+                fontFamily: "var(--font-data)",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--text-muted)",
+                marginBottom: 10,
+              }}
+            >
+              Verification history
+            </p>
+            <h1 className="text-3xl font-semibold tracking-tight" style={{ color: "var(--text)" }}>
+              Your runs
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              Every workflow you've verified, with score, status, and shareable report.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link href="/verify" className="btn-primary">
-              New verification
+          <Link href="/verify" className="btn-primary shrink-0" style={{ padding: "10px 22px", fontSize: 13 }}>
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+            </svg>
+            New verification
+          </Link>
+        </div>
+
+        {/* ── Filter tabs ─────────────────────────────── */}
+        {records.length > 0 && (
+          <div
+            className="flex items-center gap-1 mb-8 p-1 rounded-xl"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              width: "fit-content",
+            }}
+          >
+            {(
+              [
+                { key: "all",          label: `All  (${records.length})` },
+                { key: "runtime_done", label: `Completed  (${completedCount})` },
+                { key: "failed",       label: `Failed  (${failedCount})` },
+              ] as { key: StatusFilter; label: string }[]
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 9,
+                  fontSize: 12,
+                  fontWeight: filter === key ? 600 : 400,
+                  color: filter === key ? "var(--text)" : "var(--text-muted)",
+                  background: filter === key ? "var(--surface-high)" : "transparent",
+                  border: filter === key ? "1px solid var(--border-plus)" : "1px solid transparent",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                  fontFamily: "var(--font-ui)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Content ──────────────────────────────────── */}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl"
+                style={{ height: 88, background: "var(--surface)", border: "1px solid var(--border)" }}
+              />
+            ))}
+          </div>
+        ) : records.length === 0 ? (
+          <div
+            className="rounded-3xl p-14 text-center"
+            style={{ background: "var(--surface)", border: "1px dashed var(--border-plus)" }}
+          >
+            <div
+              className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl"
+              style={{ background: "var(--violet-dim)", border: "1px solid rgba(138,99,255,0.2)" }}
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                <path d="M11 4v14M4 11h14" stroke="var(--violet)" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div className="text-base font-semibold mb-2" style={{ color: "var(--text)" }}>Nothing yet</div>
+            <div className="text-sm mb-6" style={{ color: "var(--text-muted)" }}>
+              Run your first verification to see results here.
+            </div>
+            <Link href="/verify" className="btn-primary" style={{ fontSize: 13 }}>
+              Start verification
             </Link>
           </div>
-        </header>
+        ) : filtered.length === 0 ? (
+          <div className="py-16 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            No {filter === "failed" ? "failed" : "completed"} verifications.
+          </div>
+        ) : (
+          <div className="space-y-10">
+            {grouped.map(({ dateLabel, rows }) => (
+              <div key={dateLabel}>
+                {/* Date group header */}
+                <div
+                  className="mb-3 flex items-center gap-3"
+                  style={{ fontFamily: "var(--font-data)", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" }}
+                >
+                  {dateLabel}
+                  <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                </div>
 
-        <section className="mt-8 space-y-4">
-          {records.length === 0 ? (
-            <div className="glass-plus rounded-3xl border p-8">
-              <div className="text-lg font-semibold">Nothing yet</div>
-              <div className="mt-2 text-sm text-muted leading-relaxed">
-                Run your first Drygate verification to see results here.
-              </div>
-              <div className="mt-6">
-                <Link href="/verify" className="btn-primary">
-                  Start verification
-                </Link>
-              </div>
-            </div>
-          ) : (
-            records.map((r) => (
-              <div
-                key={r.id}
-                className="glass-plus rounded-3xl border p-5"
-              >
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-muted tracking-widest uppercase">
-                      {formatDate(r.createdAt.toISOString())}
-                    </div>
-                    <div className="mt-2 text-lg font-semibold break-words">
-                      {r.workflowName}
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className={statusPill(r.status)}>{String(r.status).replaceAll("_", " ")}</span>
-                      <span className="mono-tag">{r.nodeCount ?? 0} nodes</span>
-                      <span className="mono-tag">
-                        {typeof r.simulationCoverage === "number" ? `${r.simulationCoverage}% coverage` : "coverage —"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-1 lg:mt-0 flex flex-col items-start lg:items-end gap-3">
-                    <div className="text-right">
-                      <div className="text-xs text-muted">Score</div>
+                <div className="space-y-3">
+                  {rows.map((r) => {
+                    const isFailed = r.status === "failed";
+                    const sc = r.readinessScore;
+                    return (
                       <div
-                        className="mt-1 text-2xl font-bold"
+                        key={r.id}
+                        className="rounded-2xl overflow-hidden transition-all"
                         style={{
-                          color: scoreBandColor((r.scoreband as any) ?? null),
+                          background: "var(--surface-mid)",
+                          border: "1px solid var(--border)",
+                          borderLeft: isFailed ? "3px solid var(--rose)" : "3px solid var(--border)",
                         }}
                       >
-                        {typeof r.readinessScore === "number" ? r.readinessScore : "—"}
-                      </div>
-                      <div className="mt-1 text-sm text-muted">
-                        {scoreBandLabel((r.scoreband as any) ?? null)}
-                      </div>
-                    </div>
+                        <div className="flex items-center gap-4 px-5 py-4">
+                          {/* Score block */}
+                          <div
+                            className="flex flex-col items-center justify-center rounded-xl shrink-0"
+                            style={{
+                              width: 64,
+                              height: 64,
+                              background: scoreBg(sc),
+                              border: `1px solid ${scoreColor(sc)}30`,
+                            }}
+                          >
+                            <div
+                              className="font-bold tabular-nums leading-none"
+                              style={{ fontSize: sc !== null ? 28 : 16, color: scoreColor(sc) }}
+                            >
+                              {sc !== null ? sc : "—"}
+                            </div>
+                            {sc !== null && (
+                              <div
+                                style={{
+                                  fontSize: 9,
+                                  color: scoreColor(sc),
+                                  opacity: 0.7,
+                                  fontFamily: "var(--font-data)",
+                                  marginTop: 3,
+                                  textAlign: "center",
+                                  lineHeight: 1.2,
+                                  maxWidth: 56,
+                                }}
+                              >
+                                {scoreBandLabel((r.scoreband as any) ?? null)}
+                              </div>
+                            )}
+                          </div>
 
-                    {r.shareToken ? (
-                      <Link
-                        href={`/report/${r.shareToken}`}
-                        className="btn-ghost"
-                      >
-                        Open report
-                      </Link>
-                    ) : null}
-                  </div>
+                          {/* Name + meta */}
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className="font-semibold text-sm truncate mb-1.5"
+                              style={{ color: "var(--text)" }}
+                            >
+                              {r.workflowName ?? "Unnamed workflow"}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <StatusPill status={r.status} />
+                              {typeof r.nodeCount === "number" && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontFamily: "var(--font-data)",
+                                    color: "var(--text-muted)",
+                                    background: "var(--surface-plus)",
+                                    border: "1px solid var(--border)",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  {r.nodeCount} nodes
+                                </span>
+                              )}
+                              {typeof r.simulationCoverage === "number" && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontFamily: "var(--font-data)",
+                                    color: "var(--text-muted)",
+                                    background: "var(--surface-plus)",
+                                    border: "1px solid var(--border)",
+                                    padding: "2px 8px",
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  {r.simulationCoverage}% coverage
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Time + open button */}
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span
+                              style={{
+                                fontSize: 11,
+                                fontFamily: "var(--font-data)",
+                                color: "var(--text-faint)",
+                              }}
+                            >
+                              {new Date(r.createdAt).toLocaleTimeString("en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {r.shareToken && (
+                              <Link
+                                href={`/report/${r.shareToken}`}
+                                className="btn-ghost"
+                                style={{ fontSize: 12, padding: "5px 14px" }}
+                              >
+                                Open report
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))
-          )}
-        </section>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
 }
-

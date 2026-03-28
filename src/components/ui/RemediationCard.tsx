@@ -33,9 +33,9 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
         <div
           className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold font-mono mt-0.5"
           style={{
-            background: "var(--surface-plus)",
-            border: "1px solid var(--border-plus)",
-            color: "var(--text-muted)",
+            background: index === 0 ? "rgba(240,67,110,0.15)" : "var(--surface-plus)",
+            border: `1px solid ${index === 0 ? "rgba(240,67,110,0.35)" : "var(--border-plus)"}`,
+            color: index === 0 ? "var(--rose-light)" : "var(--text-muted)",
           }}
         >
           {item.priority}
@@ -52,6 +52,24 @@ export function RemediationCard({ item, index }: RemediationCardProps) {
             >
               {effortLabel(item.estimatedEffort)}
             </span>
+            {index === 0 && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  fontFamily: "var(--font-data)",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--rose-light)",
+                  background: "rgba(240,67,110,0.12)",
+                  border: "1px solid rgba(240,67,110,0.25)",
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                }}
+              >
+                Most critical
+              </span>
+            )}
           </div>
           <div className="text-sm font-semibold" style={{ color: "var(--text)" }}>
             {item.title}

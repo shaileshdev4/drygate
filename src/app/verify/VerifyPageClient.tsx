@@ -20,6 +20,13 @@ const STAGES: PipelineStage[] = [
   { id: "remediation", label: "Remediation",       sublabel: "Generating fix plan",          color: "var(--jade)"   },
 ];
 
+const STAGE_ETA: Record<string, string> = {
+  parsing:     "~2s",
+  static:      "~5s",
+  sandbox:     "~30s",
+  remediation: "~5s",
+};
+
 const STAGE_ORDER: Stage[] = ["parsing", "static", "sandbox", "remediation", "done"];
 
 const DEMO_WORKFLOW = JSON.stringify({
@@ -628,28 +635,41 @@ export default function VerifyPageClient() {
                     </div>
 
                     {/* Right status */}
-                    <div
-                      style={{
-                        fontFamily: "var(--font-data)",
-                        fontSize: 10,
-                        letterSpacing: "0.04em",
-                        flexShrink: 0,
-                        color:
-                          st === "done"   ? "var(--jade)" :
-                          st === "active" ? s.color :
-                          "var(--text-faint)",
-                      }}
-                    >
-                      {st === "done"   ? "✓" :
-                       st === "active" ? "…" :
-                       "—"}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-data)",
+                          fontSize: 10,
+                          letterSpacing: "0.04em",
+                          color:
+                            st === "done"   ? "var(--jade)" :
+                            st === "active" ? s.color :
+                            "var(--text-faint)",
+                        }}
+                      >
+                        {st === "done"   ? "✓" :
+                         st === "active" ? "…" :
+                         "—"}
+                      </div>
+                      {st === "active" && STAGE_ETA[s.id] && (
+                        <div
+                          style={{
+                            fontFamily: "var(--font-data)",
+                            fontSize: 9,
+                            color: s.color,
+                            opacity: 0.65,
+                          }}
+                        >
+                          {STAGE_ETA[s.id]}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Done state — show View Report button */}
+            {/* Done state — dramatic completion + View Report button */}
             {stage === "done" && shareToken && (
               <div
                 style={{
@@ -660,26 +680,64 @@ export default function VerifyPageClient() {
                   animation: "fadeSlideIn 0.4s both",
                 }}
               >
+                {/* Glow success banner */}
                 <div
                   style={{
-                    padding: "10px 14px",
-                    background: "var(--jade-dim)",
-                    border: "1px solid rgba(46,207,150,0.25)",
-                    borderRadius: 11,
+                    padding: "14px 16px",
+                    background: "linear-gradient(135deg, rgba(46,207,150,0.15) 0%, rgba(46,207,150,0.06) 100%)",
+                    border: "1px solid rgba(46,207,150,0.35)",
+                    borderRadius: 12,
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
+                    gap: 10,
+                    boxShadow: "0 0 32px rgba(46,207,150,0.12), inset 0 1px 0 rgba(255,255,255,0.05)",
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  <span style={{ fontSize: 15 }}>✓</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--jade-light)", letterSpacing: "-0.01em" }}>
-                    Verification complete
-                  </span>
+                  {/* Inner glow orb */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: -20,
+                      top: -20,
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      background: "radial-gradient(circle, rgba(46,207,150,0.25) 0%, transparent 70%)",
+                      pointerEvents: "none",
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: "rgba(46,207,150,0.2)",
+                      border: "1px solid rgba(46,207,150,0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                      <path d="M2.5 6.5L5.5 9.5L10.5 3.5" stroke="var(--jade)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--jade-light)", letterSpacing: "-0.01em" }}>
+                      Verification complete
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--jade)", opacity: 0.7, marginTop: 1 }}>
+                      Report ready — click below to view
+                    </div>
+                  </div>
                 </div>
                 <button
                   onClick={() => router.push(`/report/${encodeURIComponent(shareToken)}`)}
                   className="btn-primary"
-                  style={{ width: "100%", justifyContent: "center", fontSize: 14, padding: "12px 20px" }}
+                  style={{ width: "100%", justifyContent: "center", fontSize: 14, padding: "13px 20px", fontWeight: 700 }}
                 >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>

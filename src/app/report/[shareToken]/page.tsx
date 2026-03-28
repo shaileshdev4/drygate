@@ -82,8 +82,9 @@ export default async function ReportPage({
       <div className="relative z-[1] mx-auto max-w-6xl px-5 sm:px-8 lg:px-10 pb-20 pt-12 sm:pt-16">
         {/* ── Hero ───────────────────────────────────────── */}
         <header className="border-b border-[var(--border-mid)] pb-12 sm:pb-14">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl space-y-5">
+          {/* Score — dominant, top center on mobile; top right on lg */}
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl space-y-4">
               <p
                 className="text-[11px] font-semibold uppercase tracking-[0.22em]"
                 style={{ color: "var(--violet-text)" }}
@@ -108,19 +109,21 @@ export default async function ReportPage({
                   {failed ? "Pipeline error" : "Verification complete"}
                 </span>
                 {typeof data?.nodeCount === "number" ? (
-                  <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  <span className="text-sm font-mono" style={{ color: "var(--text-muted)" }}>
                     {data.nodeCount} nodes
                   </span>
                 ) : null}
                 {typeof simulationCoverage === "number" ? (
-                  <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    {simulationCoverage}% coverage
+                  <span className="text-sm font-mono" style={{ color: simulationCoverage === 0 ? "var(--text-faint)" : "var(--text-muted)" }}>
+                    {simulationCoverage}% sandbox coverage
+                    {simulationCoverage === 0 ? " (credentials not set up in sandbox)" : ""}
                   </span>
                 ) : null}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 lg:justify-end lg:pb-0.5">
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 lg:pb-0.5 shrink-0">
               <Link
                 href="/verify"
                 className="inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium transition-colors"
@@ -132,13 +135,17 @@ export default async function ReportPage({
               >
                 New verification
               </Link>
+              {/* Copy share link — proper CTA */}
               <a
                 href={`${baseUrl}/report/${shareToken}`}
-                className="btn-primary inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold"
+                className="btn-primary inline-flex items-center gap-2 justify-center rounded-full px-5 py-2.5 text-sm font-semibold"
                 target="_blank"
                 rel="noreferrer"
               >
-                Open share link
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Share report
               </a>
             </div>
           </div>
@@ -347,17 +354,37 @@ export default async function ReportPage({
           </div>
         </div>
 
-        <footer
-          className="mt-20 border-t border-[var(--border)] pt-10 text-center sm:text-left"
-          style={{ color: "var(--text-faint)" }}
+        {/* ── Share section ─────────────────────────────── */}
+        <div
+          className="mt-20 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border-mid)",
+          }}
         >
-          <p className="text-[11px] uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
-            Share token
-          </p>
-          <p className="mt-2 font-mono text-xs break-all opacity-90" style={{ color: "var(--text-2)" }}>
-            {shareToken}
-          </p>
-        </footer>
+          <div>
+            <p className="text-sm font-semibold mb-1" style={{ color: "var(--text)" }}>
+              Share this report
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-muted)" }}>
+              Anyone with this link can view the full report — no login required.
+            </p>
+            <p className="mt-2 font-mono text-[11px] break-all" style={{ color: "var(--text-faint)" }}>
+              {`${baseUrl}/report/${shareToken}`}
+            </p>
+          </div>
+          <a
+            href={`${baseUrl}/report/${shareToken}`}
+            className="btn-primary inline-flex shrink-0 items-center gap-2 justify-center rounded-full px-6 py-2.5 text-sm font-semibold"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <path d="M8 1h4v4M12 1L7.5 5.5M5 2H2a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Open share link
+          </a>
+        </div>
       </div>
     </main>
   );
