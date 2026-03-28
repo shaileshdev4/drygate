@@ -54,7 +54,8 @@
 3. Set **all env vars** from `.env.production.example`:
   ```
    NEXT_PUBLIC_APP_URL=https://your-app.railway.app
-   DATABASE_URL=<supabase connection string>
+   DATABASE_URL=<supabase transaction pooler :6543>
+   DIRECT_URL=<supabase session pooler :5432>
    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
    CLERK_SECRET_KEY=sk_live_...
    SANDBOX_N8N_URL=http://drygate-n8n-sandbox.railway.internal:5678
@@ -82,7 +83,8 @@ See `.env.production.example` in the repo root for a template.
 | Variable                                  | Required | Description                                                                         |
 | ----------------------------------------- | -------- | ----------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_APP_URL`                     | Yes      | Full URL of the deployed app (used for server-side fetch on report page)            |
-| `DATABASE_URL`                            | Yes      | Prisma connection string (Supabase postgresql URI in prod; `file:./dev.db` locally) |
+| `DATABASE_URL`                            | Yes      | Supabase **transaction** pooler (port `6543`)                                         |
+| `DIRECT_URL`                              | Yes      | Supabase **session** pooler (port `5432`, same pooler host) — for `prisma db push`    |
 | `SANDBOX_N8N_URL`                         | Yes      | Internal URL of the n8n service                                                     |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`       | Optional | Enables Clerk auth                                                                  |
 | `CLERK_SECRET_KEY`                        | Optional | Required when Clerk is enabled                                                      |
@@ -99,8 +101,7 @@ See `.env.production.example` in the repo root for a template.
 # 1. Install
 npm install
 
-# 2. Copy and edit env
-cp .env.local .env.local   # already present — set DATABASE_PROVIDER=sqlite
+# 2. Copy and edit env — set DATABASE_URL (transaction :6543) and DIRECT_URL (session :5432)
 
 # 3. Push schema
 npm run db:push
