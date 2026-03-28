@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { auth } from "@clerk/nextjs/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +10,9 @@ export async function GET(_req: NextRequest) {
     publishableKey.trim() !== "" &&
     !publishableKey.includes("your_key");
 
-  const { userId } = clerkEnabled ? auth() : { userId: null as string | null };
+  const { userId } = clerkEnabled
+    ? (await import("@clerk/nextjs/server")).auth()
+    : { userId: null as string | null };
   const effectiveUserId = userId ?? (clerkEnabled ? null : "demo-user");
 
   if (!effectiveUserId) {
