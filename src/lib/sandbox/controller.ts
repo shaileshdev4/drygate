@@ -19,7 +19,20 @@ function createDockerClient() {
   return new Dockerode({ socketPath: "/var/run/docker.sock" });
 }
 
-const docker = createDockerClient();
+// Lazy — only instantiated when the ephemeral (local Docker) path is actually used.
+// This prevents Railway/serverless environments from crashing at module load time
+// because there is no Docker socket available there.
+let _docker: Dockerode | null = null;
+function getDocker(): Dockerode {
+  if (!_docker) _docker = createDockerClient();
+  return _docker;
+}
+// Alias so existing `docker.xxx` call sites keep working with minimal churn.
+const docker = new Proxy({} as Dockerode, {
+  get(_target, prop) {
+    return (getDocker() as any)[prop];
+  },
+});
 
 // Default to latest so demo workflows (LangChain, etc.) match installed node types.
 // Override with SANDBOX_N8N_IMAGE if you need a pinned tag.
