@@ -6,7 +6,12 @@ out
 .env
 .env.local
 .env.*.local
+.env.production.example
+.env.local.example
 
+docs/
+
+dev.db
 # TypeScript / tooling
 tsconfig.tsbuildinfo
 .turbo
