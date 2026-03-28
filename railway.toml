@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npx prisma db push && npm run start"
+startCommand = "npx prisma db push && npm run start -- -p ${PORT:-3000}"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
