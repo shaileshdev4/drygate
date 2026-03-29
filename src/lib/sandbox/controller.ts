@@ -1043,6 +1043,13 @@ async function pollExecution(
   throw new Error("Execution timed out after 45 seconds.");
 }
 
+function isStickyNoteType(nodeType: string): boolean {
+  return (
+    nodeType === "n8n-nodes-base.stickyNote" ||
+    nodeType.toLowerCase() === "n8n-nodes-base.stickynote"
+  );
+}
+
 function extractTraces(
   executionData: Record<string, unknown>,
   workflow: N8nWorkflow,
@@ -1058,8 +1065,24 @@ function extractTraces(
   const nodeRunData = (runData?.runData as Record<string, unknown[]>) ?? {};
 
   for (const node of workflow.nodes) {
+    if (isStickyNoteType(node.type)) continue;
+
     const cov = coverageMap.get(node.name);
     const runs = nodeRunData[node.name];
+
+    if (cov?.class === "trigger") {
+      traces.push({
+        nodeId: node.id,
+        nodeName: node.name,
+        nodeType: node.type,
+        status: "workflow_trigger",
+        durationMs: 0,
+        inputSummary: null,
+        outputSummary: null,
+        errorMessage: null,
+      });
+      continue;
+    }
 
     if (!cov || !isRunnable(cov)) {
       traces.push({
