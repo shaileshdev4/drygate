@@ -109,6 +109,8 @@ export function nodeClassLabel(cls: string): string {
       return "Simulated";
     case "mock_intercepted":
       return "Mock Intercepted";
+    case "trigger":
+      return "Trigger";
     case "credential_blocked":
       return "Blocked (Credentials)";
     case "destructive_blocked":
@@ -126,6 +128,8 @@ export function nodeClassColor(cls: string): string {
       return "#05E27A";
     case "mock_intercepted":
       return "#3B82F6";
+    case "trigger":
+      return "#42B0F5";
     case "credential_blocked":
       return "#FFB020";
     case "destructive_blocked":

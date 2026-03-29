@@ -20,6 +20,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       readinessScore: record.readinessScore,
       scoreband: record.scoreband,
       pipelineError: record.pipelineError,
+      workflow: record.workflowJson ? JSON.parse(record.workflowJson) : null,
       staticReport: record.staticReportJson ? JSON.parse(record.staticReportJson) : null,
       runtimeReport: record.runtimeReportJson ? JSON.parse(record.runtimeReportJson) : null,
       remediationPlan: record.remediationJson ? JSON.parse(record.remediationJson) : null,

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { computeScore } from "@/lib/scorer";
 import { validateWorkflow } from "@/lib/validator";
 import { generateRemediationPlan } from "@/lib/remediation/deterministic";
+import { generateAiFixSuggestions } from "@/lib/ai/fixSuggestions";
+import type { N8nNode } from "@/types";
 import { runSandbox } from "@/lib/sandbox/controller";
 import { clearSseHistory, pushSseEvent } from "@/lib/sse/streams";
 import { buildEgressPolicyIssues } from "@/lib/guardrails/egress-policy";
@@ -52,6 +54,7 @@ export async function POST(req: NextRequest) {
       readinessScore: null,
       scoreband: null,
       simulationCoverage: null,
+      workflowJson: null,
       staticReportJson: null,
       runtimeReportJson: null,
       remediationJson: null,
@@ -74,6 +77,7 @@ export async function POST(req: NextRequest) {
     let sandboxFailed = false;
     let sandboxFailureMessage: string | null = null;
     const executionLog: string[] = [];
+    let persistedWorkflowJson: string | null = null;
 
     try {
       broadcast(verificationId, {
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
       const { report, workflow } = validateWorkflow(rawWorkflow);
       workflowName = workflow.name;
       staticReport = report;
+      persistedWorkflowJson = JSON.stringify(workflow);
 
       broadcast(verificationId, {
         type: "stage_update",
@@ -110,7 +115,11 @@ export async function POST(req: NextRequest) {
           readinessScore,
           scoreband,
           simulationCoverage: null,
+          workflowJson: persistedWorkflowJson,
           staticReportJson: JSON.stringify(staticReport),
+          complexityReportJson: staticReport.complexityReport
+            ? JSON.stringify(staticReport.complexityReport)
+            : null,
           runtimeReportJson: null,
           remediationJson: JSON.stringify(remediationPlan),
           pipelineError: null,
@@ -189,13 +198,26 @@ export async function POST(req: NextRequest) {
       const egressIssues = buildEgressPolicyIssues(runtimeReport.egressInterceptions ?? []);
       const fuzzIssues = runtimeReport.guardrailIssues ?? [];
       const mergedIssues = [...report.issues, ...egressIssues, ...fuzzIssues];
+
+      const nodeMap = new Map<string, N8nNode>();
+      for (const n of workflow.nodes) {
+        nodeMap.set(n.id, n);
+        nodeMap.set(n.name, n);
+      }
+      let issuesForReport = mergedIssues;
+      try {
+        issuesForReport = await generateAiFixSuggestions(mergedIssues, nodeMap);
+      } catch {
+        issuesForReport = mergedIssues;
+      }
+
       staticReport = {
         ...report,
-        issues: mergedIssues,
+        issues: issuesForReport,
       };
 
       const runtimeScore = computeScore({
-        issues: mergedIssues,
+        issues: issuesForReport,
         coverage: report.coverageClassification,
         runtimeReport: runtimeReport,
       });
@@ -208,7 +230,7 @@ export async function POST(req: NextRequest) {
         timestamp: nowIso(),
         payload: { stage: "remediation", message: "Generating remediation steps…" },
       });
-      remediationPlan = await generateRemediationPlan(mergedIssues);
+      remediationPlan = await generateRemediationPlan(issuesForReport);
 
       if (sandboxFailed) {
         const message = sandboxFailureMessage ?? "Sandbox execution failed.";
@@ -219,7 +241,11 @@ export async function POST(req: NextRequest) {
             readinessScore,
             scoreband,
             simulationCoverage: runtimeReport.simulationCoverage,
+            workflowJson: persistedWorkflowJson,
             staticReportJson: JSON.stringify(staticReport),
+            complexityReportJson: staticReport.complexityReport
+              ? JSON.stringify(staticReport.complexityReport)
+              : null,
             runtimeReportJson: JSON.stringify(runtimeReport),
             remediationJson: JSON.stringify(remediationPlan),
             pipelineError: message,
@@ -247,7 +273,11 @@ export async function POST(req: NextRequest) {
             readinessScore,
             scoreband,
             simulationCoverage: runtimeReport.simulationCoverage,
+            workflowJson: persistedWorkflowJson,
             staticReportJson: JSON.stringify(staticReport),
+            complexityReportJson: staticReport.complexityReport
+              ? JSON.stringify(staticReport.complexityReport)
+              : null,
             runtimeReportJson: JSON.stringify(runtimeReport),
             remediationJson: JSON.stringify(remediationPlan),
             pipelineError: null,
@@ -288,7 +318,12 @@ export async function POST(req: NextRequest) {
           pipelineError: message,
           readinessScore,
           scoreband,
+          workflowJson: persistedWorkflowJson,
           staticReportJson: staticReport ? JSON.stringify(staticReport) : null,
+          complexityReportJson:
+            staticReport?.complexityReport != null
+              ? JSON.stringify(staticReport.complexityReport)
+              : null,
           runtimeReportJson: runtimeReport ? JSON.stringify(runtimeReport) : null,
           remediationJson: remediationPlan ? JSON.stringify(remediationPlan) : null,
         },
