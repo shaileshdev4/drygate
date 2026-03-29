@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
+import demoWorkflow from "@/data/demo-workflow.json";
 
 interface WorkflowUploaderProps {
   onWorkflow: (json: unknown) => void;
@@ -53,16 +54,10 @@ export function WorkflowUploader({ onWorkflow, disabled }: WorkflowUploaderProps
     [handleFile],
   );
 
-  async function loadSample() {
-    try {
-      const res = await fetch("/sample-workflow.json");
-      const json = await res.json();
-      setPasteValue(JSON.stringify(json, null, 2));
-      setMode("paste");
-      setError(null);
-    } catch {
-      setError("Could not load sample workflow.");
-    }
+  function loadSample() {
+    setPasteValue(JSON.stringify(demoWorkflow, null, 2));
+    setMode("paste");
+    setError(null);
   }
 
   return (

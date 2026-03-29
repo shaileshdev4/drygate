@@ -121,7 +121,7 @@ const STEPS = [
     number: "05",
     title: "Remediation plan",
     description:
-      "Every issue gets deterministic remediation steps — always safe, never hallucinated. With ANTHROPIC_API_KEY set, a subset of high/critical issues may also show an optional AI suggestion tailored to that node (Claude Haiku); if the API fails, you still have the full deterministic card.",
+      "Every issue gets deterministic remediation steps — always safe, never hallucinated. With GROQ_API_KEY set, a subset of high/critical issues may also show an optional AI suggestion tailored to that node (Groq, default model openai/gpt-oss-120b); if the API fails, you still have the full deterministic card.",
     color: "var(--coral)",
     glow: "rgba(255,107,74,0.2)",
     detail: [
@@ -204,8 +204,8 @@ const FAQ = [
     a: "Usually Supabase’s transaction pooler on port 6543. Add ?pgbouncer=true to DATABASE_URL (use &pgbouncer=true if the URL already has query params). Keep DIRECT_URL on a direct or session pooler for prisma db push.",
   },
   {
-    q: "Do I need Anthropic for Drygate to work?",
-    a: "No. ANTHROPIC_API_KEY only enables optional AI suggestion strips and the AI-enhanced remediation pass. The pipeline, score, and deterministic fix steps work without it.",
+    q: "Do I need Groq (or any LLM API) for Drygate to work?",
+    a: "No. GROQ_API_KEY only enables optional AI suggestion strips and the AI-enhanced remediation pass. The pipeline, score, and deterministic fix steps work without it.",
   },
   {
     q: "Is the share link public?",

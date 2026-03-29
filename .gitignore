@@ -11,7 +11,8 @@ out
 
 docs/
 
-public/fixtures
+# Static dir untracked locally (add assets per clone as needed)
+public/
 
 dev.db
 # TypeScript / tooling

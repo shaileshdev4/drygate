@@ -1,0 +1,247 @@
+{
+  "name": "Lead Scoring & CRM Sync",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "demo-lead-webhook-001"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "s1", "name": "firstName", "value": "Sarah", "type": "string" },
+            { "id": "s2", "name": "lastName", "value": "Chen", "type": "string" },
+            { "id": "s3", "name": "email", "value": "sarah.chen@techcorp.io", "type": "string" },
+            { "id": "s4", "name": "company", "value": "TechCorp Inc", "type": "string" },
+            { "id": "s5", "name": "budget", "value": 75000, "type": "number" },
+            { "id": "s6", "name": "source", "value": "referral", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Seed Test Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-001",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Has Valid Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const lead = item.json;\n  let score = 0;\n\n  // Budget scoring\n  if (lead.budget >= 50000) score += 40;\n  else if (lead.budget >= 10000) score += 25;\n  else if (lead.budget >= 1000) score += 10;\n\n  // Source scoring\n  const highValue = ['referral', 'enterprise', 'partner'];\n  if (highValue.includes(lead.source)) score += 30;\n  else if (lead.source === 'organic') score += 15;\n\n  // Company size scoring — throws TypeError if companySize is undefined\n  // Static analysis misses this. Sandbox catches it. That's the point.\n  const bonus = lead.companySize.employees > 100 ? 20 : 10;\n  score += bonus;\n\n  const tier = score >= 70 ? 'hot' : score >= 40 ? 'warm' : 'cold';\n\n  results.push({\n    json: {\n      ...lead,\n      leadScore: score,\n      tier,\n      scoredAt: new Date().toISOString(),\n      assignedRep: score >= 70 ? 'senior-team' : 'standard-team'\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 220]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "f1", "name": "status", "value": "rejected", "type": "string" },
+            { "id": "f2", "name": "reason", "value": "Missing or invalid email", "type": "string" },
+            { "id": "f3", "name": "timestamp", "value": "={{ new Date().toISOString() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "name": "Flag Invalid Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "url": "https://api.hubspot.com/crm/v3/objects/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "Bearer <demo-hubspot-token-replace-in-n8n>" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "properties",
+              "value": "={{ JSON.stringify({ email: $json.email, firstname: $json.firstName, lastname: $json.lastName, company: $json.company, hs_lead_status: $json.tier }) }}"
+            }
+          ]
+        },
+        "options": { "timeout": 5000 }
+      },
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Create HubSpot Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 140]
+    },
+    {
+      "parameters": {
+        "url": "https://api.internal-crm.company.com/leads/log",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "apiKey", "value": "<demo-internal-crm-key-replace-in-n8n>" },
+            { "name": "leadData", "value": "={{ $json }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0009-0009-0009-000000000009",
+      "name": "Log to Internal CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 320]
+    },
+    {
+      "parameters": { "batchSize": 10, "options": {} },
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "name": "Batch Notifications",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1340, 220]
+    },
+    {
+      "parameters": {
+        "url": "https://api.example.com/drygate-demo/slack-incoming-webhook",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ '🎯 New ' + $json.tier.toUpperCase() + ' lead: ' + $json.firstName + ' ' + $json.lastName + ' from ' + $json.company + ' (Score: ' + $json.leadScore + ')' }}"
+            },
+            { "name": "channel", "value": "#sales-leads" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0008-0008-0008-000000000008",
+      "name": "Notify Sales Team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 220]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "r1", "name": "status", "value": "processed", "type": "string" },
+            { "id": "r2", "name": "leadScore", "value": "={{ $json.leadScore }}", "type": "number" },
+            { "id": "r3", "name": "tier", "value": "={{ $json.tier }}", "type": "string" },
+            {
+              "id": "r4",
+              "name": "message",
+              "value": "={{ 'Lead processed: ' + $json.firstName + ' assigned to ' + $json.assignedRep }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0010-0010-0010-000000000010",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1780, 220]
+    },
+    {
+      "parameters": {
+        "content": "## Lead Scoring & CRM Sync\n\n**Flow:**\n1. Webhook receives lead data\n2. Seeds test data fallbacks\n3. Validates email\n4. Scores 0–90 (budget + source + co. size)\n5. Creates HubSpot contact\n6. Logs to internal CRM\n7. Notifies Slack in batches\n\n**Tiers:**\n🔴 Hot  70+  → Senior team\n🟡 Warm 40–69 → Standard\n⚪ Cold  <40  → Nurture",
+        "height": 300,
+        "width": 260,
+        "color": 5
+      },
+      "id": "a1b2c3d4-0011-0011-0011-000000000011",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, 240]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leads",
+        "authentication": "none",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0099-0099-0099-000000000099",
+      "name": "Production Webhook (unauthenticated)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 500],
+      "webhookId": "demo-lead-webhook-prod"
+    }
+  ],
+  "connections": {
+    "Seed Test Data": {
+      "main": [[{ "node": "Has Valid Email", "type": "main", "index": 0 }]]
+    },
+    "Has Valid Email": {
+      "main": [
+        [{ "node": "Score Lead", "type": "main", "index": 0 }],
+        [{ "node": "Flag Invalid Lead", "type": "main", "index": 0 }]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          { "node": "Create HubSpot Contact", "type": "main", "index": 0 },
+          { "node": "Log to Internal CRM", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Create HubSpot Contact": {
+      "main": [[{ "node": "Batch Notifications", "type": "main", "index": 0 }]]
+    },
+    "Batch Notifications": {
+      "main": [[{ "node": "Notify Sales Team", "type": "main", "index": 0 }]]
+    },
+    "Notify Sales Team": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Manual Trigger": {
+      "main": [[{ "node": "Seed Test Data", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "instanceId": "drygate-demo-workflow-2026" }
+}

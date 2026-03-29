@@ -1,4 +1,5 @@
 import { Issue, N8nNode } from "@/types";
+import { groqChatCompletion } from "@/lib/ai/groq";
 
 const CODES_WORTH_AI_FIXING = new Set<string>([
   "EXPRESSION_NULL_REFERENCE",
@@ -93,33 +94,14 @@ export async function generateAiFixSuggestions(
 
   if (targetIssues.length === 0) return issues;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return issues;
-
   const results = await Promise.allSettled(
     targetIssues.map(async (issue) => {
       const node = nodes.get(issue.nodeId) ?? nodes.get(issue.nodeName);
       const prompt = buildPrompt(issue, node);
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 300,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
+      const text = await groqChatCompletion(prompt, 300);
+      if (!text) return null;
 
-      if (!response.ok) return null;
-
-      const data = (await response.json()) as { content?: Array<{ type: string; text?: string }> };
-      const text =
-        data.content?.filter((b) => b.type === "text").map((b) => b.text ?? "").join("") ?? "";
       const clean = text.replace(/```json\n?|\n?```/g, "").trim();
       const parsed = JSON.parse(clean) as {
         specificFix: string;

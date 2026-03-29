@@ -2,6 +2,7 @@ import Dockerode from "dockerode";
 import axios from "axios";
 import { Issue, N8nWorkflow, NodeCoverage, RuntimeReport, NodeTrace, EgressLog } from "@/types";
 import { isRunnable } from "@/lib/validator/classifier";
+import { parseWorkflow } from "@/lib/validator/parser";
 
 function createDockerClient() {
   // Windows Docker Desktop exposes the daemon via named pipe.
@@ -68,10 +69,21 @@ interface SandboxResult {
  * Coerce workflow triggers into `manualTrigger` so the sandbox execution can
  * start deterministically without needing an external event (webhook/chat).
  *
+ * Only **graph entry** triggers (no incoming edges) are coerced. Secondary
+ * webhook nodes used mid-flow (or disconnected demo webhooks) keep their real
+ * type so we do not create multiple manual triggers.
+ *
  * Important: we preserve the original node `id` and `name` so our trace/
  * coverage mapping remains stable.
  */
 function transformWorkflowForManualExecution(workflow: N8nWorkflow): N8nWorkflow {
+  const graph = parseWorkflow(workflow);
+  const entryTriggerNames = new Set(
+    graph.triggerNodes
+      .filter((n) => (graph.reverseAdjacency.get(n.name)?.size ?? 0) === 0)
+      .map((n) => n.name),
+  );
+
   const nodes = workflow.nodes.map((n) => {
     const type = (n.type ?? "").toLowerCase();
     const isManualTrigger = type === "n8n-nodes-base.manualtrigger";
@@ -80,7 +92,7 @@ function transformWorkflowForManualExecution(workflow: N8nWorkflow): N8nWorkflow
       // Covers webhook/chat/schedule style triggers.
       (type.includes("trigger") || type.includes("webhook"));
 
-    if (!looksLikeTrigger) return n;
+    if (!looksLikeTrigger || !entryTriggerNames.has(n.name)) return n;
 
     return {
       ...n,
@@ -203,9 +215,11 @@ export async function runSandbox(
     await waitForN8n(n8nBaseUrl, 120_000, onLog);
     onLog("n8n is ready.");
 
+    const executionWorkflow = transformWorkflowForManualExecution(workflow);
+
     // ── 6. Import workflow ────────────────────────────────────────
     onLog("Importing workflow into sandbox...");
-    const importedWorkflow = await importWorkflow(n8nBaseUrl, workflow, onLog);
+    const importedWorkflow = await importWorkflow(n8nBaseUrl, executionWorkflow, onLog);
     const workflowId = importedWorkflow.id;
     onLog(`Workflow imported: ID ${workflowId}`);
 
@@ -220,7 +234,7 @@ export async function runSandbox(
 
     // ── 9. Extract traces ─────────────────────────────────────────
     onLog("Extracting node traces...");
-    const nodeTraces = extractTraces(executionData, workflow, coverage);
+    const nodeTraces = extractTraces(executionData, workflow, coverage, executionWorkflow);
 
     // ── 10. Read egress log from gateway ─────────────────────────
     onLog("Reading egress log from mock gateway...");
@@ -303,7 +317,7 @@ async function runPersistentSandbox(
     );
 
     onLog("Extracting node traces...");
-    const nodeTraces = extractTraces(executionData, workflow, coverage);
+    const nodeTraces = extractTraces(executionData, workflow, coverage, executionWorkflow);
     const simulatableCount = coverage.filter(isRunnable).length;
     const ranCount = nodeTraces.filter(
       (t) => t.status === "success" || t.status === "error",
@@ -798,7 +812,7 @@ async function runPersistentFuzzExecutions(
       const execId = parseExecutionIdFromRunResponse(restResponse.data);
       if (!execId) continue;
       const execData = await pollPersistentExecution(baseUrl, execId, 30_000, onLog);
-      const traces = extractTraces(execData, originalWorkflow, coverage);
+      const traces = extractTraces(execData, originalWorkflow, coverage, executionWorkflow);
       if (traces.some((t) => t.status === "error")) {
         issues.push({
           issueCode: "INPUT_CONTRACT_FAILURE",
@@ -818,6 +832,36 @@ async function runPersistentFuzzExecutions(
   }
 
   return issues;
+}
+
+/** Single GET for a finished execution with full data (used after poll + settle). */
+async function fetchPersistentExecutionRecord(
+  baseUrl: string,
+  executionId: string,
+): Promise<Record<string, unknown>> {
+  let response = await axios.get(`${baseUrl}/rest/executions/${executionId}?includeData=true`, {
+    headers: persistentHeadersWithOptionalApiKey(),
+    auth: persistentRequestAuth(),
+    timeout: 5_000,
+    validateStatus: () => true,
+  });
+  if (response.status >= 400) {
+    response = await axios.get(`${baseUrl}/api/v1/executions/${executionId}`, {
+      headers: persistentHeadersWithOptionalApiKey(),
+      auth: persistentRequestAuth(),
+      timeout: 5_000,
+      validateStatus: () => true,
+      params: { includeData: true },
+    });
+  }
+  if (response.status >= 400) {
+    throw new Error(
+      `Fetch execution failed (${response.status}): ${JSON.stringify(response.data).slice(0, 300)}`,
+    );
+  }
+  const exec =
+    (response.data as Record<string, unknown>).data ?? (response.data as Record<string, unknown>);
+  return exec as Record<string, unknown>;
 }
 
 async function pollPersistentExecution(
@@ -855,7 +899,14 @@ async function pollPersistentExecution(
     const finished = (exec as Record<string, unknown>).finished;
     onLog(`[sandbox] persistent execution status: ${String(status ?? finished)}`);
     if (finished || status === "success" || status === "error") {
-      return exec as Record<string, unknown>;
+      onLog("[sandbox] execution finished; re-fetching after short delay for runData…");
+      await sleep(500);
+      try {
+        return await fetchPersistentExecutionRecord(baseUrl, executionId);
+      } catch (err) {
+        onLog(`[sandbox] re-fetch execution failed, using poll payload: ${(err as Error).message}`);
+        return exec as Record<string, unknown>;
+      }
     }
   }
   throw new Error("Persistent execution timed out after 45 seconds.");
@@ -1019,6 +1070,7 @@ async function pollExecution(
       auth: { username: SANDBOX_USER, password: SANDBOX_PASS },
       timeout: 5_000,
       validateStatus: () => true,
+      params: { includeData: true },
     });
 
     if (response.status >= 400) {
@@ -1050,31 +1102,71 @@ function isStickyNoteType(nodeType: string): boolean {
   );
 }
 
+/**
+ * Per-node execution rows from a finished execution. Usually
+ * `execution.data.resultData.runData`, keyed by **node name** (sometimes id on newer n8n).
+ * Shape varies slightly between `/rest/executions?includeData=true` and `/api/v1/executions`.
+ */
+function extractNodeRunDataMap(executionData: Record<string, unknown>): Record<string, unknown[]> {
+  const data = executionData.data as Record<string, unknown> | undefined;
+  const fromNested = data?.resultData as Record<string, unknown> | undefined;
+  let map = fromNested?.runData as Record<string, unknown[]> | undefined;
+  if (map && typeof map === "object" && Object.keys(map).length > 0) return map;
+
+  const top = executionData.resultData as Record<string, unknown> | undefined;
+  map = top?.runData as Record<string, unknown[]> | undefined;
+  if (map && typeof map === "object" && Object.keys(map).length > 0) return map;
+
+  // Some responses wrap again (e.g. data.data.resultData)
+  const inner = data?.data as Record<string, unknown> | undefined;
+  const innerRd = inner?.resultData as Record<string, unknown> | undefined;
+  map = innerRd?.runData as Record<string, unknown[]> | undefined;
+  if (map && typeof map === "object" && Object.keys(map).length > 0) return map;
+
+  // n8n 2.x: data.data.data.resultData.runData
+  const deepData = (inner as Record<string, unknown> | undefined)?.data as
+    | Record<string, unknown>
+    | undefined;
+  const deepRd = deepData?.resultData as Record<string, unknown> | undefined;
+  map = deepRd?.runData as Record<string, unknown[]> | undefined;
+  if (map && typeof map === "object" && Object.keys(map).length > 0) return map;
+
+  return {};
+}
+
+/**
+ * @param workflow — Original export (node types for UI, static coverage keys).
+ * @param executionWorkflow — Graph actually sent to n8n after trigger coercion; when set, we walk
+ *   this node list so order/structure match execution, while `workflow` supplies display types.
+ */
 function extractTraces(
   executionData: Record<string, unknown>,
   workflow: N8nWorkflow,
   coverage: NodeCoverage[],
+  executionWorkflow?: N8nWorkflow,
 ): NodeTrace[] {
   const traces: NodeTrace[] = [];
   const coverageMap = new Map(coverage.map((c) => [c.nodeName, c]));
+  const typeById = new Map(workflow.nodes.map((n) => [n.id, n]));
 
-  // n8n stores run data in data.resultData.runData keyed by node name
-  const runData = (executionData.data as Record<string, unknown>)?.resultData as
-    | Record<string, unknown>
-    | undefined;
-  const nodeRunData = (runData?.runData as Record<string, unknown[]>) ?? {};
+  const nodeRunData = extractNodeRunDataMap(executionData);
+  const nodesToWalk = executionWorkflow?.nodes ?? workflow.nodes;
 
-  for (const node of workflow.nodes) {
+  for (const node of nodesToWalk) {
     if (isStickyNoteType(node.type)) continue;
 
+    const displayNode = typeById.get(node.id) ?? node;
+
     const cov = coverageMap.get(node.name);
-    const runs = nodeRunData[node.name];
+    const runs =
+      nodeRunData[node.name] ??
+      (node.id ? nodeRunData[node.id] : undefined);
 
     if (cov?.class === "trigger") {
       traces.push({
         nodeId: node.id,
         nodeName: node.name,
-        nodeType: node.type,
+        nodeType: displayNode.type,
         status: "workflow_trigger",
         durationMs: 0,
         inputSummary: null,
@@ -1088,7 +1180,7 @@ function extractTraces(
       traces.push({
         nodeId: node.id,
         nodeName: node.name,
-        nodeType: node.type,
+        nodeType: displayNode.type,
         status: "blocked",
         durationMs: 0,
         inputSummary: null,
@@ -1102,7 +1194,7 @@ function extractTraces(
       traces.push({
         nodeId: node.id,
         nodeName: node.name,
-        nodeType: node.type,
+        nodeType: displayNode.type,
         status: "skipped",
         durationMs: 0,
         inputSummary: null,
@@ -1119,7 +1211,7 @@ function extractTraces(
     traces.push({
       nodeId: node.id,
       nodeName: node.name,
-      nodeType: node.type,
+      nodeType: displayNode.type,
       status: hasError ? "error" : "success",
       durationMs: typeof lastRun.executionTime === "number" ? lastRun.executionTime : 0,
       inputSummary: summarize((lastRun.data as Record<string, unknown>)?.main?.[0]?.[0] ?? null),

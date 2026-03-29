@@ -1,4 +1,5 @@
 import { Issue, IssueCode, RemediationItem, RemediationPlan, EffortEstimate } from "@/types";
+import { groqChatCompletion } from "@/lib/ai/groq";
 
 // ─────────────────────────────────────────────────────────
 // Lookup table: issueCode → deterministic fix steps
@@ -487,7 +488,7 @@ export function generateDeterministicPlan(issues: Issue[]): RemediationItem[] {
 }
 
 // ─────────────────────────────────────────────────────────
-// AI enhancer - calls Claude/CREAO, falls back silently
+// AI enhancer - Groq (OpenAI-compatible), falls back silently
 // ─────────────────────────────────────────────────────────
 
 export async function generateRemediationPlan(issues: Issue[]): Promise<RemediationPlan> {
@@ -513,9 +514,6 @@ async function callAIEnhancer(
   issues: Issue[],
   fallback: RemediationItem[],
 ): Promise<RemediationItem[] | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
   const prompt = `You are an n8n workflow reliability engineer.
   
   Below is a JSON array of issues found in an n8n workflow. For each issue, rewrite the remediation steps to be more specific and actionable given the node context.
@@ -543,24 +541,9 @@ async function callAIEnhancer(
   
   Respond ONLY with a JSON array of RemediationItem objects with fields: issueCode, nodeId, nodeName, priority, title, steps (string[]), estimatedEffort ("minutes"|"hours"|"days").`;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4000,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
+  const text = await groqChatCompletion(prompt, 4000);
+  if (!text) return null;
 
-  if (!response.ok) return null;
-
-  const data = await response.json();
-  const text = data.content?.[0]?.text ?? "";
   const clean = text.replace(/```json|```/g, "").trim();
   return JSON.parse(clean);
 }

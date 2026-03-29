@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import demoWorkflow from "@/data/demo-workflow.json";
 
 /* ── Types ─────────────────────────────────────────────────── */
 type Stage = "idle" | "parsing" | "static" | "sandbox" | "remediation" | "done" | "error";
@@ -39,33 +40,9 @@ const STAGE_ETA: Record<string, string> = {
 
 const STAGE_ORDER: Stage[] = ["parsing", "static", "sandbox", "remediation", "done"];
 
-const DEMO_WORKFLOW = JSON.stringify(
-  {
-    name: "Demo: E-commerce Order Sync",
-    nodes: [
-      { id: "n1", name: "Webhook Trigger", type: "n8n-nodes-base.webhook", position: [100, 200] },
-      { id: "n2", name: "Validate Order", type: "n8n-nodes-base.if", position: [300, 200] },
-      {
-        id: "n3",
-        name: "HTTP Request",
-        type: "n8n-nodes-base.httpRequest",
-        position: [500, 200],
-        parameters: {
-          url: "https://api.example.com/orders",
-          authentication: "genericCredentialType",
-        },
-      },
-      { id: "n4", name: "Send Slack", type: "n8n-nodes-base.slack", position: [700, 200] },
-    ],
-    connections: {
-      "Webhook Trigger": { main: [[{ node: "Validate Order", type: "main", index: 0 }]] },
-      "Validate Order": { main: [[{ node: "HTTP Request", type: "main", index: 0 }]] },
-      "HTTP Request": { main: [[{ node: "Send Slack", type: "main", index: 0 }]] },
-    },
-  },
-  null,
-  2,
-);
+const DEMO_FILE_NAME = "lead-scoring-crm-sync-demo.json";
+
+const DEMO_WORKFLOW = JSON.stringify(demoWorkflow, null, 2);
 
 /* ── Helpers ───────────────────────────────────────────────── */
 function stageIndex(s: Stage): number {
@@ -105,7 +82,7 @@ export default function VerifyPageClient() {
   useEffect(() => {
     if (searchParams?.get("demo") === "1" && !input) {
       setInput(DEMO_WORKFLOW);
-      setFileName("demo-ecommerce-order-sync.json");
+      setFileName(DEMO_FILE_NAME);
     }
   }, [searchParams]);
 
@@ -611,7 +588,7 @@ export default function VerifyPageClient() {
               <button
                 onClick={() => {
                   setInput(DEMO_WORKFLOW);
-                  setFileName("demo-ecommerce-order-sync.json");
+                  setFileName(DEMO_FILE_NAME);
                   setError(null);
                 }}
                 className="btn-ghost"

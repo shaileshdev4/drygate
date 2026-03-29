@@ -20,8 +20,8 @@ Parse → Static Analysis → Sandbox Execution → Remediation Plan
 
 1. **Parse** - validates JSON shape, nodes array, connection graph, trigger presence
 2. **Static gate** - graph and credential rules, **expression** analysis (`{{ }}`), **rate limiting** (loops vs APIs), **webhook** security (auth, response mode, path guessability), **input validation** (trigger → destructive paths), **AI / LangChain** checks (system prompt, memory, errors), **AI prompt-injection** heuristics for untrusted input in LLM parameters, production **manifest** and **egress** guardrails, plus **workflow complexity** (informational score: nodes, branches, depth, sub-workflows). Issues are grouped on the report into **Security**, **Reliability**, **Logic**, **Configuration**, and **AI / Agents**.
-3. **Sandbox** - imports the workflow into an isolated n8n instance, coerces triggers to manual, executes, captures per-node traces and runtime errors. **Sticky notes** are excluded from coverage and traces. **Trigger** nodes are classified separately from credential-blocked nodes and appear under **Trigger** in the coverage breakdown, not under **Blocked**.
-4. **Remediation** - deterministic fix cards (step-by-step, effort estimates). If **`ANTHROPIC_API_KEY`** is set, up to five **high/critical** issues also get an optional **AI suggestion** block (Claude Haiku) alongside deterministic steps; failures there never block the pipeline.
+3. **Sandbox** - imports the workflow into an isolated n8n instance, coerces **graph entry** triggers (webhook/schedule/…) to a single manual run, executes, captures per-node traces and runtime errors. **Sticky notes** are excluded from coverage and traces. **Trigger** nodes are classified separately from credential-blocked nodes and appear under **Trigger** in the coverage breakdown, not under **Blocked**. Execution payloads are normalized for multiple n8n API shapes, with a short **re-fetch** after completion so `runData` is populated when the first response is still sparse.
+4. **Remediation** - deterministic fix cards (step-by-step, effort estimates). If **`GROQ_API_KEY`** is set, up to five **high/critical** issues also get an optional **AI suggestion** block (Groq **`openai/gpt-oss-120b`** by default) alongside deterministic steps, and the full plan can be **AI-enhanced**; failures there never block the pipeline.
 
 **Outputs:**
 
@@ -118,7 +118,7 @@ curl http://localhost:5678/healthz
 npm run dev
 ```
 
-Open `http://localhost:3000`. Go to `/verify?demo=1` to run the prefilled demo workflow.
+Open `http://localhost:3000`. Go to `/verify?demo=1` or click **Load demo** on `/verify` to run the prefilled **Lead Scoring & CRM Sync** sample (`src/data/demo-workflow.json`).
 
 ---
 
@@ -159,11 +159,12 @@ If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** - per-request Do
 | `SANDBOX_N8N_API_KEY` | n8n API key when using public API routes                                                  |
 | `SANDBOX_N8N_IMAGE`   | Only relevant if you restore Docker-per-run sandbox (default in code: `n8nio/n8n:latest`) |
 
-### AI (optional)
+### AI (optional — Groq)
 
-| Variable             | Description                                                                 |
-| -------------------- | ----------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`  | Enables per-issue **AI fix suggestions** (Claude Haiku) on selected high/critical codes after static + runtime merge; optional AI-enhanced remediation plan |
+| Variable                  | Description                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `GROQ_API_KEY`            | Enables per-issue **AI fix suggestions** and optional **AI-enhanced** remediation plan (OpenAI-compatible chat API) |
+| `GROQ_REMEDIATION_MODEL`  | Optional. Defaults to **`openai/gpt-oss-120b`**. Override if Groq adds/alters model IDs. |
 
 ### Guardrails (optional)
 
@@ -228,6 +229,8 @@ SANDBOX_N8N_URL=https://your-n8n.up.railway.app
 ```
 drygate/
 ├── src/
+│   ├── data/
+│   │   └── demo-workflow.json        # Built-in demo for /verify?demo=1 & Load demo
 │   ├── app/
 │   │   ├── api/
 │   │   │   ├── verify/
@@ -270,7 +273,8 @@ drygate/
 │   │   │   ├── deterministic.ts      # Fix cards + optional AI-enhanced plan
 │   │   │   └── categories.ts         # Issue → Security / Reliability / …
 │   │   ├── ai/
-│   │   │   └── fixSuggestions.ts     # Optional Haiku hints on issues
+│   │   │   ├── groq.ts               # Groq OpenAI-compatible client (remediation AI)
+│   │   │   └── fixSuggestions.ts     # Optional per-issue AI hints
 │   │   ├── guardrails/               # Egress, credential manifest, fuzz
 │   │   ├── sse/
 │   │   │   └── streams.ts            # SSE fan-out store
@@ -421,7 +425,8 @@ Liveness / diagnostics (deployment debugging).
 
 - **Expression static analysis** - null/array/fallback and dead `$node` reference checks across `{{ }}` parameters.
 - **Extended static rules** - rate limiting, webhook hardening, input validation, AI agent hygiene, prompt-injection heuristics, workflow complexity metric, categorized issues on the report.
-- **Optional AI** - Claude Haiku suggestions on a small set of high/critical issues when `ANTHROPIC_API_KEY` is set.
+- **Optional AI (Groq)** - `openai/gpt-oss-120b` (configurable via `GROQ_REMEDIATION_MODEL`) for per-issue hints and plan enhancement when `GROQ_API_KEY` is set.
+- **Sandbox reliability** - only **entry** graph triggers are coerced to manual (avoids a second webhook becoming a duplicate manual trigger); execution **`runData`** is read from multiple n8n response shapes (incl. nested `data.data`); after a run finishes, a **delayed re-fetch** reduces empty traces / 0% simulation coverage on fast polls.
 
 ### Still open
 
@@ -448,7 +453,7 @@ The pinData generator needs coverage for approximately 30 node types to cover
 
 For workflows where even pinData cannot produce meaningful coverage (complex
 branching, dynamic expressions, AI agent chains), Drygate will send the full
-workflow JSON plus node type registry to Claude and ask it to:
+workflow JSON plus node type registry to an LLM and ask it to:
 
 - Trace data flow through the execution graph with realistic synthetic inputs
 - Identify expressions that will fail under specific payload shapes
@@ -486,7 +491,7 @@ proposition for enterprise teams running self-hosted n8n at scale.
 | AI simulation (full graph)| Planned                                | Complex branching                        |
 | Security expression scan  | Planned — deeper than current heuristics | All workflows                        |
 
-Per-issue **AI suggestions** (Haiku) are already available for a subset of codes when `ANTHROPIC_API_KEY` is set.
+Per-issue **AI suggestions** (Groq) are already available for a subset of codes when `GROQ_API_KEY` is set.
 
 ---
 
