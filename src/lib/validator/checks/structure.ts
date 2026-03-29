@@ -3,7 +3,10 @@ import { WorkflowGraph, reachableFrom, hasCycle, isTriggerNode } from "../parser
 
 /** n8n Sticky Notes are annotations only: no wires, no execution - not a defect. */
 function isStickyNoteNode(nodeType: string): boolean {
-  return nodeType.toLowerCase() === "n8n-nodes-base.stickynote";
+  return (
+    nodeType === "n8n-nodes-base.stickyNote" ||
+    nodeType.toLowerCase() === "n8n-nodes-base.stickynote"
+  );
 }
 
 export function runStructureChecks(workflow: N8nWorkflow, graph: WorkflowGraph): Issue[] {

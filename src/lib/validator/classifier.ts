@@ -1,4 +1,12 @@
 import { N8nNode, NodeClass, NodeCoverage } from "@/types";
+import { isTriggerNode } from "./parser";
+
+function isStickyNoteNode(nodeType: string): boolean {
+  return (
+    nodeType === "n8n-nodes-base.stickyNote" ||
+    nodeType.toLowerCase() === "n8n-nodes-base.stickynote"
+  );
+}
 
 // Nodes we can run as-is - no external side effects, no credentials
 const FULLY_SIMULATABLE: string[] = [
@@ -161,7 +169,7 @@ export function classifyNode(node: N8nNode): NodeCoverage {
 }
 
 export function classifyAllNodes(nodes: N8nNode[]): NodeCoverage[] {
-  return nodes.map(classifyNode);
+  return nodes.filter((n) => !isStickyNoteNode(n.type)).map(classifyNode);
 }
 
 export function getSimulatableClasses(): NodeClass[] {

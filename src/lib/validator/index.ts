@@ -6,6 +6,12 @@ import { runCredentialChecks } from "./checks/credentials";
 import { runErrorHandlingChecks } from "./checks/error-handling";
 import { runLoopChecks, runPerformanceChecks } from "./checks/loops";
 import { runProductionManifestChecks } from "@/lib/guardrails/production-manifest";
+import { runExpressionChecks } from "./checks/expressions";
+import { runAiChecks } from "./checks/ai";
+import { runRateLimitingChecks } from "./checks/rateLimiting";
+import { runWebhookSecurityChecks } from "./checks/webhookSecurity";
+import { runInputValidationChecks } from "./checks/inputValidation";
+import { computeComplexity } from "./complexity";
 
 export interface ValidatorResult {
   report: StaticReport;
@@ -40,6 +46,13 @@ export function validateWorkflow(rawJson: unknown): ValidatorResult {
   runCheck("error_handling", runErrorHandlingChecks(workflow));
   runCheck("loops", runLoopChecks(workflow, graph));
   runCheck("performance", runPerformanceChecks(workflow));
+  runCheck("expressions", runExpressionChecks(workflow));
+  runCheck("ai_agent", runAiChecks(workflow));
+  runCheck("rate_limiting", runRateLimitingChecks(workflow));
+  runCheck("webhook_security", runWebhookSecurityChecks(workflow));
+  runCheck("input_validation", runInputValidationChecks(workflow));
+
+  const complexityReport = computeComplexity(workflow);
 
   const simulatableCount = coverage.filter(
     (c) => c.class === "fully_simulatable" || c.class === "mock_intercepted",
@@ -61,6 +74,7 @@ export function validateWorkflow(rawJson: unknown): ValidatorResult {
     totalNodes: workflow.nodes.length,
     simulatableNodeCount: simulatableCount,
     blockedNodeCount: blockedCount,
+    complexityReport,
   };
 
   return { report, workflow };

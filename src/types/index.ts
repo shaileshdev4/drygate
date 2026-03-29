@@ -36,7 +36,8 @@ export type N8nConnections = {
 
 export type NodeClass =
   | "fully_simulatable" // Set, IF, Switch, Merge, Code(JS), NoOp, Function, Wait
-  | "mock_intercepted" // HTTP Request, GraphQL, Webhook trigger
+  | "mock_intercepted" // HTTP Request, GraphQL (non-trigger HTTP)
+  | "trigger" // Webhook, Schedule, Manual, Telegram, etc. — entry points, not credential-blocked
   | "credential_blocked" // Gmail, Slack, Postgres, any node with credentials
   | "destructive_blocked" // Send Email, Write Binary File, DELETE ops
   | "structural_only"; // Execute Workflow, custom/community nodes
@@ -65,11 +66,18 @@ export type IssueCode =
   | "HARDCODED_SECRET"
   | "CREDENTIAL_REF_MISSING"
   | "CREDENTIAL_REF_INCONSISTENT"
+  | "WEBHOOK_NO_AUTHENTICATION"
+  | "WEBHOOK_NO_RESPONSE_HANDLING"
+  | "WEBHOOK_EXPOSED_ON_PUBLIC_PATH"
   // error handling
   | "MISSING_ERROR_OUTPUT"
   | "NO_GLOBAL_ERROR_WORKFLOW"
-  // loops
+  | "HTTP_REQUEST_RETRY_DISABLED"
+  // loops / rate limiting (validators may add these)
   | "UNBOUNDED_LOOP"
+  | "LOOP_NO_RATE_LIMITING"
+  | "SPLIT_IN_BATCHES_NO_WAIT"
+  | "SCHEDULE_TOO_AGGRESSIVE"
   // performance
   | "LONG_SYNCHRONOUS_WAIT"
   | "LARGE_PAYLOAD_RISK"
@@ -82,7 +90,22 @@ export type IssueCode =
   | "NODE_ERRORED_IN_SANDBOX"
   | "BLOCKED_REQUIRES_CREDENTIALS"
   | "BLOCKED_DESTRUCTIVE_SIDE_EFFECT"
-  | "BLOCKED_UNKNOWN_NODE";
+  | "BLOCKED_UNKNOWN_NODE"
+  // expression static analysis
+  | "EXPRESSION_NULL_REFERENCE"
+  | "EXPRESSION_ARRAY_INDEX"
+  | "EXPRESSION_DEAD_NODE_REFERENCE"
+  | "EXPRESSION_MISSING_FALLBACK"
+  | "NO_INPUT_VALIDATION"
+  | "LARGE_DATASET_NO_BATCHING"
+  | "DESTRUCTIVE_WITH_NO_GUARD"
+  // AI / LangChain workflow checks
+  | "AI_AGENT_NO_SYSTEM_PROMPT"
+  | "AI_AGENT_NO_MEMORY"
+  | "AI_AGENT_NO_ERROR_HANDLING"
+  | "LLM_NO_FALLBACK_MODEL"
+  | "VECTOR_STORE_NO_VALIDATION"
+  | "AI_PROMPT_INJECTION_RISK";
 
 export interface Issue {
   issueCode: IssueCode;
@@ -95,6 +118,28 @@ export interface Issue {
   remediationHint: string;
   // for hardcoded secrets - the field path, not the value
   fieldPath?: string;
+  aiSuggestion?: {
+    specificFix: string;
+    exampleCode?: string;
+    generatedAt: string;
+  };
+}
+
+// ─────────────────────────────────────────────
+// Workflow complexity (informational, not pass/fail)
+// ─────────────────────────────────────────────
+
+export type ComplexityRating = "low" | "medium" | "high" | "very_high";
+
+export interface ComplexityReport {
+  rating: ComplexityRating;
+  score: number;
+  nodeCount: number;
+  branchCount: number;
+  loopCount: number;
+  maxDepth: number;
+  subWorkflowCount: number;
+  reasons: string[];
 }
 
 // ─────────────────────────────────────────────
@@ -110,13 +155,14 @@ export interface StaticReport {
   totalNodes: number;
   simulatableNodeCount: number;
   blockedNodeCount: number;
+  complexityReport?: ComplexityReport;
 }
 
 // ─────────────────────────────────────────────
 // Runtime / sandbox
 // ─────────────────────────────────────────────
 
-export type NodeTraceStatus = "success" | "error" | "blocked" | "skipped";
+export type NodeTraceStatus = "success" | "error" | "blocked" | "skipped" | "workflow_trigger";
 
 export interface NodeTrace {
   nodeId: string;
@@ -214,6 +260,8 @@ export interface VerificationRecord {
   readinessScore: number | null;
   scoreband: ScoreBand | null;
   simulationCoverage: number | null;
+  /** Parsed n8n workflow JSON when stored by the verifier. */
+  workflow?: N8nWorkflow | null;
   staticReport: StaticReport | null;
   runtimeReport: RuntimeReport | null;
   remediationPlan: RemediationPlan | null;
