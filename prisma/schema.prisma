@@ -2,6 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// DATABASE_URL: use the transaction pooler (e.g. Supabase :6543) with ?pgbouncer=true
+// so Prisma disables prepared statements — otherwise Postgres can error with:
+//   prepared statement "s0" already exists (42P05)
+// DIRECT_URL: direct or session pooler for migrations / db push (no pgbouncer flag).
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -21,7 +25,9 @@ model Verification {
   readinessScore     Int?
   scoreband          String?
   simulationCoverage Float?
-  staticReportJson   String?
+  workflowJson       String?
+  staticReportJson     String?
+  complexityReportJson String?
   runtimeReportJson  String?
   remediationJson    String?
   pipelineError      String?
