@@ -19,15 +19,17 @@ Parse → Static Analysis → Sandbox Execution → Remediation Plan
 ```
 
 1. **Parse** - validates JSON shape, nodes array, connection graph, trigger presence
-2. **Static gate** - 20+ rules: hardcoded secrets, disconnected nodes, missing error outputs, unbounded loops, credential drift, async timeouts, global error workflow
-3. **Sandbox** - imports the workflow into an isolated n8n instance, coerces triggers to manual, executes, captures per-node traces and runtime errors
-4. **Remediation** - deterministic fix cards with step-by-step instructions and time estimates, generated from the merged issue set
+2. **Static gate** - graph and credential rules, **expression** analysis (`{{ }}`), **rate limiting** (loops vs APIs), **webhook** security (auth, response mode, path guessability), **input validation** (trigger → destructive paths), **AI / LangChain** checks (system prompt, memory, errors), **AI prompt-injection** heuristics for untrusted input in LLM parameters, production **manifest** and **egress** guardrails, plus **workflow complexity** (informational score: nodes, branches, depth, sub-workflows). Issues are grouped on the report into **Security**, **Reliability**, **Logic**, **Configuration**, and **AI / Agents**.
+3. **Sandbox** - imports the workflow into an isolated n8n instance, coerces triggers to manual, executes, captures per-node traces and runtime errors. **Sticky notes** are excluded from coverage and traces. **Trigger** nodes are classified separately from credential-blocked nodes and appear under **Trigger** in the coverage breakdown, not under **Blocked**.
+4. **Remediation** - deterministic fix cards (step-by-step, effort estimates). If **`ANTHROPIC_API_KEY`** is set, up to five **high/critical** issues also get an optional **AI suggestion** block (Claude Haiku) alongside deterministic steps; failures there never block the pipeline.
 
 **Outputs:**
 
 - Readiness score (0–100) with a named band
-- Per-issue list with severity, node reference, and code
-- Simulation coverage % (nodes that actually ran)
+- **Complexity** badge (low → very high) on the shareable report
+- Per-issue list with severity, category, node reference, and code; expandable remediation + optional AI hint
+- **Workflow graph** and **simulation coverage** breakdown (executed / blocked / skipped / trigger)
+- Simulation coverage % (relative to nodes the sandbox can run)
 - Shareable report link (no login required)
 - Full verification history
 
@@ -51,7 +53,7 @@ Parse → Static Analysis → Sandbox Execution → Remediation Plan
 | Layer               | Technology                                                                                            |
 | ------------------- | ----------------------------------------------------------------------------------------------------- |
 | Frontend + API      | Next.js 14 (App Router)                                                                               |
-| Database            | Prisma + **PostgreSQL** only (`DATABASE_URL` + `DIRECT_URL` for Supabase-style poolers)               |
+| Database            | Prisma + **PostgreSQL** only (`DATABASE_URL` + `DIRECT_URL`; use **`?pgbouncer=true`** on Supabase **:6543** transaction pooler to avoid prepared-statement errors) |
 | Auth                | **Demo mode** - fixed `demo-user` in API/UI; no sign-in flow                                          |
 | Sandbox             | **Persistent** n8n URL (`SANDBOX_N8N_URL`); local stack is `n8nio/n8n:latest` in `docker-compose.yml` |
 | Streaming           | Server-Sent Events (SSE)                                                                              |
@@ -157,6 +159,12 @@ If **`SANDBOX_N8N_URL` is unset**, the sandbox layer **throws** - per-request Do
 | `SANDBOX_N8N_API_KEY` | n8n API key when using public API routes                                                  |
 | `SANDBOX_N8N_IMAGE`   | Only relevant if you restore Docker-per-run sandbox (default in code: `n8nio/n8n:latest`) |
 
+### AI (optional)
+
+| Variable             | Description                                                                 |
+| -------------------- | ----------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`  | Enables per-issue **AI fix suggestions** (Claude Haiku) on selected high/critical codes after static + runtime merge; optional AI-enhanced remediation plan |
+
 ### Guardrails (optional)
 
 | Variable                                  | Description                                                                                                 |
@@ -240,29 +248,44 @@ drygate/
 │   │   └── layout.tsx                # Header + Footer
 │   ├── lib/
 │   │   ├── validator/                # Static analysis
-│   │   │   ├── index.ts              # Orchestrator
-│   │   │   ├── classifier.ts         # Node coverage classification
+│   │   │   ├── index.ts              # Orchestrator + complexity report
+│   │   │   ├── classifier.ts         # Coverage: trigger vs blocked; sticky excluded
+│   │   │   ├── complexity.ts         # Maintainability complexity score
 │   │   │   ├── parser.ts             # Workflow graph parser
-│   │   │   └── checks/              # Per-rule modules
+│   │   │   └── checks/               # Per-rule modules
 │   │   │       ├── structure.ts
 │   │   │       ├── credentials.ts
 │   │   │       ├── error-handling.ts
-│   │   │       └── loops.ts
+│   │   │       ├── loops.ts
+│   │   │       ├── expressions.ts
+│   │   │       ├── ai.ts
+│   │   │       ├── rateLimiting.ts
+│   │   │       ├── webhookSecurity.ts
+│   │   │       └── inputValidation.ts
 │   │   ├── scorer/
 │   │   │   └── index.ts              # Scoring engine + bands
 │   │   ├── sandbox/
-│   │   │   └── controller.ts         # n8n sandbox orchestration
+│   │   │   └── controller.ts         # n8n sandbox + node traces
 │   │   ├── remediation/
-│   │   │   └── deterministic.ts      # Fix card generator
-│   │   ├── guardrails/              # Egress, credential manifest, fuzz
+│   │   │   ├── deterministic.ts      # Fix cards + optional AI-enhanced plan
+│   │   │   └── categories.ts         # Issue → Security / Reliability / …
+│   │   ├── ai/
+│   │   │   └── fixSuggestions.ts     # Optional Haiku hints on issues
+│   │   ├── guardrails/               # Egress, credential manifest, fuzz
 │   │   ├── sse/
 │   │   │   └── streams.ts            # SSE fan-out store
 │   │   └── db/
-│   │       └── index.ts              # Prisma client
+│   │       └── index.ts              # Prisma client (+ pooler URL warning)
 │   ├── components/
-│   │   └── layout/
-│   │       ├── Header.tsx
-│   │       └── Footer.tsx
+│   │   ├── layout/
+│   │   │   ├── Header.tsx
+│   │   │   └── Footer.tsx
+│   │   ├── report/
+│   │   │   └── ReportCategorizedIssues.tsx
+│   │   └── ui/
+│   │       ├── WorkflowGraph.tsx
+│   │       ├── CoverageBreakdown.tsx
+│   │       └── ScoreGauge.tsx
 │   └── types/
 │       └── index.ts                  # All shared types
 ├── prisma/
@@ -305,6 +328,19 @@ Starts at 100 and deducts per finding.
 | `NO_GLOBAL_ERROR_WORKFLOW`     | 10        |                    |
 | `DISCONNECTED_NODE`            | 5         | Capped at 20 total |
 | `LONG_SYNCHRONOUS_WAIT`        | 5         |                    |
+| `LOOP_NO_RATE_LIMITING`        | 18        | Capped at 36 total |
+| `SPLIT_IN_BATCHES_NO_WAIT`     | 15        | Capped at 30 total |
+| `HTTP_REQUEST_RETRY_DISABLED`  | 8         | Capped at 16 total |
+| `SCHEDULE_TOO_AGGRESSIVE`      | 5         | Capped at 5 total  |
+| `WEBHOOK_NO_AUTHENTICATION`    | 12        | Capped at 24 total |
+| `WEBHOOK_NO_RESPONSE_HANDLING` | 8         | Capped at 16 total |
+| `WEBHOOK_EXPOSED_ON_PUBLIC_PATH` | 5       | Capped at 5 total  |
+| `AI_PROMPT_INJECTION_RISK`     | 20        | Capped at 40 total |
+| `NO_INPUT_VALIDATION`          | 15        | Capped at 30 total |
+| `LARGE_DATASET_NO_BATCHING`    | 10        | Capped at 20 total |
+| `DESTRUCTIVE_WITH_NO_GUARD`    | 18        | Capped at 36 total |
+
+*(Expression and other codes are defined in `src/lib/scorer/index.ts`.)*
 
 ### Runtime deductions
 
@@ -314,7 +350,7 @@ Starts at 100 and deducts per finding.
 
 ### Blocked coverage penalty
 
-If more than 60% of nodes are `credential_blocked`, `destructive_blocked`, or `structural_only`, score takes an additional 10-point deduction (low confidence in result).
+If more than 60% of analyzed nodes are `credential_blocked`, `destructive_blocked`, or `structural_only` (excluding **trigger** nodes and sticky notes, which are not part of coverage), score takes an additional 10-point deduction (low confidence in result).
 
 ---
 
@@ -372,7 +408,7 @@ Liveness / diagnostics (deployment debugging).
 ## Known limits
 
 - Scoring is heuristic, not a formal proof of production safety
-- Sandbox cannot validate real credentials - credential-dependent nodes may be `credential_blocked` or error at runtime
+- Sandbox cannot validate real credentials - integration nodes are usually `credential_blocked`; **workflow triggers** are labeled `trigger`, not blocked, for clearer reporting
 - **Ephemeral** Docker-per-request sandbox is **disabled**; use persistent n8n only
 - **Egress allowlist** guardrails assume traffic can be observed (mock gateway path); persistent public n8n won’t see the same proxy setup
 - Very new n8n exports can still surface import/API quirks - pin n8n if you need a frozen baseline
@@ -381,34 +417,17 @@ Liveness / diagnostics (deployment debugging).
 
 ## Roadmap
 
-The current sandbox has a fundamental coverage gap: credential-dependent nodes
-(Gmail, Slack, OpenAI, Postgres, etc.) are classified `credential_blocked` and
-skipped entirely. For most real-world workflows this means 0–8% simulation
-coverage - the sandbox runs but finds nothing new beyond static analysis.
+### Shipped in this codebase
 
-The fix is not a better sandbox. It is replacing sandbox dependency with three
-new analysis layers that together produce 80%+ coverage on any workflow,
-including credential-heavy ones.
+- **Expression static analysis** - null/array/fallback and dead `$node` reference checks across `{{ }}` parameters.
+- **Extended static rules** - rate limiting, webhook hardening, input validation, AI agent hygiene, prompt-injection heuristics, workflow complexity metric, categorized issues on the report.
+- **Optional AI** - Claude Haiku suggestions on a small set of high/critical issues when `ANTHROPIC_API_KEY` is set.
 
-### Layer 1 - Expression analyzer
+### Still open
 
-Every n8n node parameter can contain `{{ }}` expressions. Static analysis
-currently ignores them. The expression analyzer will parse every expression
-across every node and flag:
+The sandbox still has a **coverage gap** on credential-heavy workflows: most integration nodes stay `credential_blocked`, so simulation coverage is often low. The main lever for higher execution coverage without real secrets is **pinData simulation** (below).
 
-- Null reference access on optional fields -
-  `{{ $json.user.email }}` with no null guard
-- Array index access without length check -
-  `{{ $json.items[0].id }}` when `items` can be empty
-- Missing fallback operators -
-  `{{ $json.name }}` instead of `{{ $json.name ?? "Unknown" }}`
-- Cross-node references to nodes not reachable in the current execution path
-
-This catches the class of bugs that causes the most production crashes and
-requires no execution at all. Static analysis of expressions is a capability
-no existing n8n linter has.
-
-### Layer 2 - pinData simulation
+### Layer 1 - pinData simulation
 
 n8n's official `pinData` feature lets you inject synthetic output into any node
 so downstream nodes receive it and execute normally. This is exactly what the
@@ -425,7 +444,7 @@ No credentials required. No Docker required. Works on Vercel.
 The pinData generator needs coverage for approximately 30 node types to cover
 80% of community workflows.
 
-### Layer 3 - AI simulation
+### Layer 2 - AI simulation (workflow-wide)
 
 For workflows where even pinData cannot produce meaningful coverage (complex
 branching, dynamic expressions, AI agent chains), Drygate will send the full
@@ -439,7 +458,7 @@ workflow JSON plus node type registry to Claude and ask it to:
 This produces findings similar to runtime traces without requiring any
 execution. One API call per workflow.
 
-### Layer 4 - Security expression scanning
+### Layer 3 - Security expression scanning
 
 n8n has had five critical RCE vulnerabilities in the last four months
 (CVE-2025-68613, CVE-2026-27577, CVE-2026-27493, CVE-2026-27495,
@@ -460,16 +479,14 @@ proposition for enterprise teams running self-hosted n8n at scale.
 
 ### Coverage projection
 
-| Layer                     | Adds to coverage                       | Applies to                               |
+| Layer                     | Status / goal                          | Applies to                               |
 | ------------------------- | -------------------------------------- | ---------------------------------------- |
-| Static analysis (current) | -                                      | 100% of workflows                        |
-| Expression analyzer       | +15–20 score pts on affected workflows | 100% of workflows                        |
-| pinData simulation        | 8% → 70–90% coverage                   | All workflows including credential-heavy |
-| AI simulation             | Catches logic errors                   | Workflows with complex branching         |
-| Security scanning         | New issue class                        | All workflows                            |
+| Static + expressions      | **Shipped**                            | 100% of workflows                        |
+| pinData simulation        | Planned — higher sandbox coverage      | Credential-heavy workflows               |
+| AI simulation (full graph)| Planned                                | Complex branching                        |
+| Security expression scan  | Planned — deeper than current heuristics | All workflows                        |
 
-**Estimated build time:** 10 focused days to ship all four layers as a complete
-product.
+Per-issue **AI suggestions** (Haiku) are already available for a subset of codes when `ANTHROPIC_API_KEY` is set.
 
 ---
 

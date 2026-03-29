@@ -37,14 +37,16 @@ const STEPS = [
     number: "02",
     title: "Static analysis runs",
     description:
-      "Drygate parses the workflow graph and runs deterministic rule checks - no n8n required. Issues are categorized by type and severity.",
+      "Drygate parses the workflow graph and runs deterministic rule checks — no n8n required. Findings roll up into five issue categories (Security, Reliability, Logic, Configuration, AI / Agents) on the report.",
     color: "var(--sky)",
     glow: "rgba(66,176,245,0.2)",
     detail: [
-      "Graph topology: disconnected nodes, missing triggers, unreachable branches",
-      "Security: hardcoded secrets or tokens in node parameters",
-      "Resilience: missing error branches, no global error handler",
-      "Performance: potential loops, unbounded waits, blocking HTTP calls",
+      "Graph: disconnected nodes, missing triggers, cycles, disabled nodes in path",
+      "Expressions: risky {{ }} access, missing fallbacks, dead $node references",
+      "Security & webhooks: secrets, webhook auth, prompt-injection heuristics for LLM nodes",
+      "Reliability: error outputs, rate limiting (loops vs APIs), HTTP retries, schedules",
+      "Input flow: validation between triggers and destructive or high-risk steps",
+      "AI agents: system prompt, memory, error handling; plus a complexity score for maintainability",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -63,14 +65,15 @@ const STEPS = [
     number: "03",
     title: "Sandbox execution",
     description:
-      "The workflow is loaded into a real n8n instance. Triggers are converted to manual triggers so execution can start deterministically. Every node that ran is traced.",
+      "The workflow is loaded into a real n8n instance. Triggers are converted to manual triggers so execution can start deterministically. Per-node traces power the coverage card on your report.",
     color: "var(--amber)",
     glow: "rgba(245,185,66,0.2)",
     detail: [
-      "Workflow triggers coerced to manual triggers for deterministic runs",
-      "Per-node execution traces: status, output, errors",
-      "Simulation coverage: what % of nodes actually ran",
-      "Runtime issues merge with static issues for a unified score",
+      "Sticky notes are annotations only — they are omitted from coverage and simulation lists",
+      "Workflow triggers (e.g. Telegram, Webhook) are labeled Trigger, not lumped in with credential-blocked nodes",
+      "Blocked = nodes that need real credentials or are unsafe to run in the sandbox; Skipped = on-graph but not executed (e.g. untaken branch)",
+      "Simulation coverage = share of sandbox-runnable nodes that actually executed",
+      "Runtime findings merge with static issues for one score",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -92,7 +95,7 @@ const STEPS = [
     number: "04",
     title: "Score and band",
     description:
-      "A deduction-based scorer starts from 100 and subtracts per finding. Critical issues (missing trigger, hardcoded secrets) have fail-closed rules. The result maps to a band.",
+      "A deduction-based scorer starts from 100 and subtracts per finding. Critical issues (missing trigger, hardcoded secrets, unauthorized egress, circular dependencies) can trigger fail-closed caps. The report also shows a separate complexity rating (maintainability), not a pass/fail.",
     color: "var(--jade)",
     glow: "rgba(46,207,150,0.2)",
     detail: [
@@ -100,6 +103,7 @@ const STEPS = [
       "Score 65–84 → Minor Issues",
       "Score 40–64 → Significant Issues",
       "Score below 40 → Not Ready",
+      "Complexity badge: node count, branches, loops, depth — high/very high shows a short rationale",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -117,14 +121,14 @@ const STEPS = [
     number: "05",
     title: "Remediation plan",
     description:
-      "Every issue generates a prioritized fix card - effort estimate, exact steps, and which node to edit. Fix the most critical first, work down the list.",
+      "Every issue gets deterministic remediation steps — always safe, never hallucinated. With ANTHROPIC_API_KEY set, a subset of high/critical issues may also show an optional AI suggestion tailored to that node (Claude Haiku); if the API fails, you still have the full deterministic card.",
     color: "var(--coral)",
     glow: "rgba(255,107,74,0.2)",
     detail: [
-      "Cards ordered by priority (Critical → High → Medium → Low)",
-      "Effort estimate: how long the fix should take",
-      "Exact steps: what to change and where",
-      "First card is always the highest-impact fix",
+      "Issues grouped by category; expand a row for step-by-step fixes",
+      "Cards ordered by severity (critical first)",
+      "Effort hints: minutes vs hours vs days",
+      "Optional purple “AI suggestion” strip when the model returns a concise, node-specific fix",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -144,14 +148,14 @@ const STEPS = [
     number: "06",
     title: "Shareable report",
     description:
-      "Every verification generates a unique share token. Anyone with the link can view the full report - score, issues, remediation - without needing an account.",
+      "Every verification generates a unique share token. Anyone with the link can view the full report — score, graph, coverage breakdown, categorized issues, and remediation — without an account.",
     color: "var(--violet-light)",
     glow: "rgba(167,139,255,0.2)",
     detail: [
-      "Persistent report URL - share with your team, PM, or reviewer",
-      "Full report: score, band, issue list, remediation plan",
-      "No login required to view a shared report",
-      "History page keeps all your past verifications",
+      "Score hero with issue counts, coverage %, and complexity",
+      "Interactive workflow graph colored by trace status and issues",
+      "Coverage sidebar: Executed, Blocked, Skipped, Trigger",
+      "No login required; dashboard history is available in demo mode",
     ],
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -193,7 +197,15 @@ const FAQ = [
   },
   {
     q: "Is 0% simulation coverage a problem?",
-    a: "It means no nodes executed successfully. Common causes: a node near the start requires credentials that aren't set up in the sandbox, or the trigger wasn't converted to a manual trigger properly. Static analysis findings are still fully valid when coverage is 0.",
+    a: "It means no sandbox-runnable nodes executed successfully. Common causes: the first real steps need credentials the sandbox does not have, or execution stopped early. Your static analysis and issue list are still valid; triggers and stickies do not count against “blocked” the same way integration nodes do.",
+  },
+  {
+    q: "Why do I see Postgres error 42P05 (prepared statement already exists)?",
+    a: "Usually Supabase’s transaction pooler on port 6543. Add ?pgbouncer=true to DATABASE_URL (use &pgbouncer=true if the URL already has query params). Keep DIRECT_URL on a direct or session pooler for prisma db push.",
+  },
+  {
+    q: "Do I need Anthropic for Drygate to work?",
+    a: "No. ANTHROPIC_API_KEY only enables optional AI suggestion strips and the AI-enhanced remediation pass. The pipeline, score, and deterministic fix steps work without it.",
   },
   {
     q: "Is the share link public?",
@@ -226,7 +238,7 @@ export default function HowItWorksPage() {
             className="text-[clamp(2rem,5vw,3rem)] font-semibold leading-[1.1] tracking-tight"
             style={{ color: "var(--text)" }}
           >
-            Six steps from upload to fix plan
+            From upload to scored report and fix plan
           </h1>
           <p className="mt-5 text-base leading-relaxed" style={{ color: "var(--text-2)" }}>
             Drygate runs a layered verification pipeline - static analysis then live sandbox
