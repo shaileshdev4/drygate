@@ -158,14 +158,19 @@ export function computeScore(input: ScoringInput): ScoreBreakdown {
 
   // ── Sum up ───────────────────────────────────────────────────────
   const totalDeduction = deductions.reduce((acc, d) => acc + d.amount, 0);
-  let rawScore = Math.max(0, 100 - totalDeduction);
+
+  // Cap total deductions at 90 — minimum meaningful score is 10.
+  // Prevents >100 deductions collapsing to 0 on issue-heavy workflows.
+  const cappedDeduction = Math.min(90, totalDeduction);
+  let rawScore = Math.max(10, 100 - cappedDeduction);
 
   // ── Fail-closed check ────────────────────────────────────────────
   const failClosedIssue = input.issues.find((i) => FAIL_CLOSED_ISSUE_CODES.has(i.issueCode));
   let failClosedTriggered = false;
   let failClosedReason: string | undefined;
 
-  if (failClosedIssue && rawScore > 40) {
+  // Fail-closed caps score at 40 regardless of arithmetic.
+  if (failClosedIssue) {
     failClosedTriggered = true;
     failClosedReason = `Score capped at 40: fail-closed rule triggered by ${failClosedIssue.issueCode}. This class of issue makes a workflow fundamentally unsafe for production regardless of other scores.`;
     rawScore = Math.min(rawScore, 40);
