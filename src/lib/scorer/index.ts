@@ -27,6 +27,28 @@ const DEDUCTIONS: Record<string, number> = {
   INPUT_CONTRACT_FAILURE: 25,
   // Runtime deductions
   NODE_ERRORED_IN_SANDBOX: 15,
+  // expression analysis
+  EXPRESSION_DEAD_NODE_REFERENCE: 20,
+  EXPRESSION_NULL_REFERENCE: 8,
+  EXPRESSION_ARRAY_INDEX: 8,
+  EXPRESSION_MISSING_FALLBACK: 3,
+  // AI / LangChain
+  AI_AGENT_NO_ERROR_HANDLING: 12,
+  AI_AGENT_NO_SYSTEM_PROMPT: 8,
+  AI_AGENT_NO_MEMORY: 5,
+  LLM_NO_FALLBACK_MODEL: 5,
+  VECTOR_STORE_NO_VALIDATION: 8,
+  WEBHOOK_NO_AUTHENTICATION: 12,
+  WEBHOOK_NO_RESPONSE_HANDLING: 8,
+  WEBHOOK_EXPOSED_ON_PUBLIC_PATH: 5,
+  AI_PROMPT_INJECTION_RISK: 20,
+  HTTP_REQUEST_RETRY_DISABLED: 8,
+  LOOP_NO_RATE_LIMITING: 18,
+  SPLIT_IN_BATCHES_NO_WAIT: 15,
+  SCHEDULE_TOO_AGGRESSIVE: 5,
+  NO_INPUT_VALIDATION: 15,
+  LARGE_DATASET_NO_BATCHING: 10,
+  DESTRUCTIVE_WITH_NO_GUARD: 18,
 };
 
 // Maximum total deduction per issue CODE (prevents one repeated issue from zeroing score)
@@ -36,15 +58,34 @@ const MAX_DEDUCTION_PER_CODE: Partial<Record<string, number>> = {
   LARGE_PAYLOAD_RISK: 9,
   NODE_ERRORED_IN_SANDBOX: 30,
   INPUT_CONTRACT_FAILURE: 50,
+  EXPRESSION_DEAD_NODE_REFERENCE: 40,
+  EXPRESSION_NULL_REFERENCE: 16,
+  EXPRESSION_ARRAY_INDEX: 16,
+  EXPRESSION_MISSING_FALLBACK: 6,
+  WEBHOOK_NO_AUTHENTICATION: 24,
+  WEBHOOK_NO_RESPONSE_HANDLING: 16,
+  WEBHOOK_EXPOSED_ON_PUBLIC_PATH: 5,
+  AI_PROMPT_INJECTION_RISK: 40,
+  LOOP_NO_RATE_LIMITING: 36,
+  SPLIT_IN_BATCHES_NO_WAIT: 30,
+  HTTP_REQUEST_RETRY_DISABLED: 16,
+  SCHEDULE_TOO_AGGRESSIVE: 5,
+  NO_INPUT_VALIDATION: 30,
+  LARGE_DATASET_NO_BATCHING: 20,
+  DESTRUCTIVE_WITH_NO_GUARD: 36,
 };
 
 // Fail-closed codes: if any of these are present, score is capped at 40
-const FAIL_CLOSED_CODES = new Set([
+export const FAIL_CLOSED_ISSUE_CODES = new Set([
   "MISSING_TRIGGER",
   "HARDCODED_SECRET",
   "CIRCULAR_DEPENDENCY",
   "UNAUTHORIZED_EGRESS_DETECTED",
 ]);
+
+export function hasFailClosedIssue(issues: { issueCode: string }[]): boolean {
+  return issues.some((i) => FAIL_CLOSED_ISSUE_CODES.has(i.issueCode));
+}
 
 function getBand(score: number): ScoreBand {
   if (score >= 85) return "production_ready";
@@ -120,7 +161,7 @@ export function computeScore(input: ScoringInput): ScoreBreakdown {
   let rawScore = Math.max(0, 100 - totalDeduction);
 
   // ── Fail-closed check ────────────────────────────────────────────
-  const failClosedIssue = input.issues.find((i) => FAIL_CLOSED_CODES.has(i.issueCode));
+  const failClosedIssue = input.issues.find((i) => FAIL_CLOSED_ISSUE_CODES.has(i.issueCode));
   let failClosedTriggered = false;
   let failClosedReason: string | undefined;
 

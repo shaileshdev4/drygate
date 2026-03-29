@@ -236,6 +236,225 @@ const FIX_TEMPLATES: Record<IssueCode, FixTemplate> = {
     ],
     effort: "hours",
   },
+
+  EXPRESSION_DEAD_NODE_REFERENCE: {
+    title: "Fix or remove invalid $node references in expressions",
+    steps: [
+      "Open the node in the n8n editor.",
+      "Find the expression containing $node[\"NodeName\"].",
+      "Check if the referenced node was renamed or deleted.",
+      "Update the expression to use the correct node name.",
+      "Re-run the workflow to verify the reference resolves.",
+    ],
+    effort: "minutes",
+  },
+
+  EXPRESSION_NULL_REFERENCE: {
+    title: "Use optional chaining and fallbacks in expressions",
+    steps: [
+      "Open the node and locate the expression.",
+      "Replace .property with ?.property (optional chaining).",
+      "Add a fallback with ?? 'default-value' at the end.",
+      "Example: {{ $json.user.email }} → {{ $json.user?.email ?? '' }}",
+    ],
+    effort: "minutes",
+  },
+
+  EXPRESSION_ARRAY_INDEX: {
+    title: "Guard array index access in expressions",
+    steps: [
+      "Before this node, add an IF node checking array length > 0.",
+      "Route the false branch to a Set node with a safe default.",
+      "On the true branch, access the array index safely.",
+      "Alternatively use: {{ $json.items?.[0]?.id ?? null }}",
+    ],
+    effort: "minutes",
+  },
+
+  EXPRESSION_MISSING_FALLBACK: {
+    title: "Add default values to expression outputs",
+    steps: [
+      "Open the node and find the expression.",
+      "Add ?? 'fallback' after the field access.",
+      "Choose a sensible default for the context (empty string, 0, null).",
+    ],
+    effort: "minutes",
+  },
+
+  AI_AGENT_NO_SYSTEM_PROMPT: {
+    title: "Add a system prompt to the AI Agent",
+    steps: [
+      "Open the AI Agent node in n8n.",
+      "Locate the system message or options → system message field.",
+      "Write clear instructions: role, constraints, output format, and what to avoid.",
+      "Save and test with a few representative inputs.",
+    ],
+    effort: "minutes",
+  },
+
+  AI_AGENT_NO_MEMORY: {
+    title: "Attach memory to the conversational AI Agent",
+    steps: [
+      "Add a Window Buffer Memory (or Postgres/Redis Chat Memory) node to the canvas.",
+      "Connect it to the AI Agent using the agent's memory input (sub-connection).",
+      "Configure session key or persistence as required for your use case.",
+      "Test a multi-turn conversation to confirm context is retained.",
+    ],
+    effort: "minutes",
+  },
+
+  AI_AGENT_NO_ERROR_HANDLING: {
+    title: "Add error handling for the AI Agent",
+    steps: [
+      "Enable Continue On Fail on the agent or LLM sub-nodes if partial failure is acceptable.",
+      "Or connect the node's error output to Slack, email, or a Set node that records the failure.",
+      "Optionally add retry logic or a fallback model path after the error branch.",
+      "Re-run Drygate to confirm the workflow no longer fails silently on LLM errors.",
+    ],
+    effort: "minutes",
+  },
+
+  LLM_NO_FALLBACK_MODEL: {
+    title: "Add fallback or error routing for the LLM node",
+    steps: [
+      "Enable Continue On Fail on the LLM node if appropriate.",
+      "Add an IF node downstream to detect empty or error output.",
+      "Route failures to a second LLM provider or a notification node.",
+      "Document the fallback path for operators.",
+    ],
+    effort: "minutes",
+  },
+
+  VECTOR_STORE_NO_VALIDATION: {
+    title: "Validate vector store retrieval results",
+    steps: [
+      "Add an IF node immediately after the vector store node.",
+      "Condition: results array exists and length > 0 (match your node's output shape).",
+      "On false, route to a safe default response or skip downstream RAG steps.",
+      "Test with a query that returns no matches.",
+    ],
+    effort: "minutes",
+  },
+
+  WEBHOOK_NO_AUTHENTICATION: {
+    title: "Protect the webhook trigger",
+    steps: [
+      "Open the Webhook node and set Authentication to Header Auth, Basic Auth, or JWT as appropriate.",
+      "Create a credential and share the secret only with trusted callers.",
+      "Reject requests without valid credentials at the edge (reverse proxy or API gateway) if possible.",
+      "Test with both valid and invalid requests before going live.",
+    ],
+    effort: "minutes",
+  },
+
+  AI_PROMPT_INJECTION_RISK: {
+    title: "Sanitize untrusted input before LLM prompts",
+    steps: [
+      "Add a Code node before the AI Agent node.",
+      "Extract only the specific field needed from user input. Example: const message = $input.first().json.message ?? '';",
+      "Sanitize for injection patterns: const safe = message.replace(/ignore|disregard|forget|you are now/gi, '[removed]');",
+      "Limit input length: const truncated = safe.slice(0, 500);",
+      "Pass the sanitized variable into the prompt — never $json directly.",
+    ],
+    effort: "minutes",
+  },
+
+  HTTP_REQUEST_RETRY_DISABLED: {
+    title: "Enable retry on fail for HTTP Request",
+    steps: [
+      "Open the HTTP Request node.",
+      "Go to Settings tab.",
+      'Enable "Retry On Fail".',
+      "Set Max Tries to 3.",
+      "Set Wait Between Tries to 1000ms minimum.",
+    ],
+    effort: "minutes",
+  },
+
+  LOOP_NO_RATE_LIMITING: {
+    title: "Add a Wait node to pace loop iterations",
+    steps: [
+      "Find the Wait node in the n8n editor node panel.",
+      "Insert it between the loop output and the API call node.",
+      "Set wait duration to at least 1000ms (1 second).",
+      "For HubSpot: 100ms. Slack: 1000ms. OpenAI: 500ms.",
+      "Test by running with a small dataset first.",
+    ],
+    effort: "minutes",
+  },
+
+  SPLIT_IN_BATCHES_NO_WAIT: {
+    title: "Insert a Wait between batches and API calls",
+    steps: [
+      "Insert a Wait node between Split In Batches and the downstream API node.",
+      "Use 1–2 seconds between batches unless the API documents a stricter limit.",
+      "Ensure output 1 (done) is connected so the workflow completes cleanly.",
+      "Validate batch size vs API quotas.",
+    ],
+    effort: "minutes",
+  },
+
+  SCHEDULE_TOO_AGGRESSIVE: {
+    title: "Relax the schedule trigger frequency",
+    steps: [
+      "Open the Schedule Trigger node and confirm the interval or cron is intentional.",
+      "Increase the interval to at least 30–60 seconds for polling-style jobs, or longer if the API is rate-limited.",
+      "Prefer webhooks or push notifications instead of tight polling when possible.",
+      "Monitor execution count and API usage after changes.",
+    ],
+    effort: "minutes",
+  },
+
+  WEBHOOK_NO_RESPONSE_HANDLING: {
+    title: "Add Respond to Webhook or change response mode",
+    steps: [
+      "Add a Respond to Webhook node on the path that should answer the caller.",
+      "Configure status code and JSON/body to match your API contract.",
+      "Alternatively set the Webhook response mode to immediate if you do not need to wait for downstream nodes.",
+      "Test with curl or Postman to confirm the client receives a timely response.",
+    ],
+    effort: "minutes",
+  },
+
+  WEBHOOK_EXPOSED_ON_PUBLIC_PATH: {
+    title: "Use a hard-to-guess path and strong authentication",
+    steps: [
+      "Replace short or dictionary paths with a long random segment (UUID).",
+      "Enable Header Auth, Basic Auth, or JWT on the Webhook node.",
+      "If the URL must stay simple, put authentication and rate limiting at your reverse proxy or API gateway.",
+    ],
+    effort: "minutes",
+  },
+
+  NO_INPUT_VALIDATION: {
+    title: "Validate trigger payload before side effects",
+    steps: [
+      "Add an IF or Switch node after the trigger to assert required fields and types.",
+      "Route invalid payloads to logging, error response, or a dead-letter path.",
+      "Use optional chaining and defaults in expressions as a second layer of defense.",
+    ],
+    effort: "minutes",
+  },
+
+  LARGE_DATASET_NO_BATCHING: {
+    title: "Batch large reads before downstream processing",
+    steps: [
+      "Add Split In Batches after the node that returns many rows (e.g. batch size 10–50).",
+      "Process each batch in the loop output; connect the done output to post-processing.",
+      "If each batch calls external APIs, add a Wait inside the loop to avoid rate limits.",
+    ],
+    effort: "minutes",
+  },
+
+  DESTRUCTIVE_WITH_NO_GUARD: {
+    title: "Guard destructive operations behind validation",
+    steps: [
+      "Add IF/Switch/Filter immediately after the trigger to verify identity, intent, and payload shape.",
+      "Never run delete, send, charge, or refund paths on unvalidated input.",
+      "Log rejected attempts and return a safe error to the caller.",
+    ],
+    effort: "minutes",
+  },
 };
 
 // Priority order by severity
