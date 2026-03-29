@@ -20,6 +20,8 @@ interface Props {
   issues: Issue[];
   nodeTraces: NodeTrace[];
   coverageClassification: NodeCoverage[];
+  /** Report page: use shared `.report-graph-card` surface instead of the default dark card. */
+  embedded?: boolean;
 }
 
 function getNodeStatus(
@@ -411,6 +413,7 @@ export function WorkflowGraph({
   issues,
   nodeTraces,
   coverageClassification,
+  embedded = false,
 }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -444,18 +447,24 @@ export function WorkflowGraph({
     <>
       {/* ── Card ── */}
       <div
-        style={{
-          background: "rgba(14,12,20,0.8)",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: 16,
-          overflow: "hidden",
-        }}
+        className={embedded ? "report-graph-card" : undefined}
+        style={
+          embedded
+            ? { overflow: "hidden" }
+            : {
+                background: "rgba(14,12,20,0.8)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: 16,
+                overflow: "hidden",
+              }
+        }
       >
         {/* Header */}
         <div
           style={{
-            padding: "14px 18px",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            padding: embedded ? "0 0 14px 0" : "14px 18px",
+            marginBottom: embedded ? 0 : undefined,
+            borderBottom: embedded ? "none" : "1px solid rgba(255,255,255,0.06)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -463,10 +472,11 @@ export function WorkflowGraph({
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span
+              className={embedded ? "report-card-label" : undefined}
               style={{
                 fontFamily: "'DM Mono', monospace",
                 fontSize: 10,
-                color: "rgba(255,255,255,0.25)",
+                color: embedded ? undefined : "rgba(255,255,255,0.25)",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
               }}
@@ -477,7 +487,7 @@ export function WorkflowGraph({
               style={{
                 fontFamily: "'DM Mono', monospace",
                 fontSize: 10,
-                color: "rgba(255,255,255,0.18)",
+                color: embedded ? "var(--text-muted)" : "rgba(255,255,255,0.18)",
               }}
             >
               {visibleNodeCount} nodes · {issueNodeCount} with issues
@@ -507,7 +517,7 @@ export function WorkflowGraph({
                     display: "flex",
                     alignItems: "center",
                     gap: 5,
-                    color: "rgba(255,255,255,0.25)",
+                    color: embedded ? "var(--text-muted)" : "rgba(255,255,255,0.25)",
                   }}
                 >
                   <span

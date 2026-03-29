@@ -11,6 +11,8 @@ out
 
 docs/
 
+public/fixtures
+
 dev.db
 # TypeScript / tooling
 tsconfig.tsbuildinfo

@@ -495,7 +495,7 @@ h3 {
   border-left: 3px solid var(--rose) !important;
   background: linear-gradient(90deg, rgba(240, 67, 110, 0.08) 0%, transparent 55%) !important;
 }
-.gate-card-high {
+.gate-card-high{
   border-left: 3px solid var(--coral) !important;
   background: linear-gradient(90deg, rgba(255, 107, 74, 0.07) 0%, transparent 55%) !important;
 }
